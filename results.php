@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/src/bootstrap.php';
 
 $user = $auth->requireLogin();
+$isAdmin = $auth->isAdmin();
 $users = $storage->getUsers(false);
 $divisions = gssf_divisions();
 $gunGroups = gssf_guns_by_generation();
@@ -18,12 +19,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
         if ($action === 'save_result') {
             $id = (int)($_POST['id'] ?? 0);
-            $userId = (int)($_POST['user_id'] ?? 0);
+            $userId = $isAdmin ? (int)($_POST['user_id'] ?? 0) : (int)$user['id'];
             $matchId = (int)($_POST['match_id'] ?? 0);
             $division = trim((string)($_POST['division'] ?? 'Amateur Civilian'));
             $gun = trim((string)($_POST['gun'] ?? ''));
             $notes = trim((string)($_POST['notes'] ?? ''));
 
+            $existingForEdit = $id > 0 ? $storage->getResultById($id) : null;
+            if ($id > 0 && (!$existingForEdit || (!$isAdmin && (int)$existingForEdit['user_id'] !== (int)$user['id']))) {
+                $flashError = 'Only administrators can edit other shooters\' match times.';
+            } else {
             $match = $matchId > 0 ? $storage->getMatchById($matchId) : null;
 
             $parseStrings = static function (mixed $raw, int $count): array {
@@ -136,9 +141,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $flashSuccess = 'New match time logged.';
                 }
             }
+            }
         } elseif ($action === 'delete_result') {
             $id = (int)($_POST['id'] ?? 0);
-            if ($id > 0 && $storage->deleteResult($id)) {
+            $existingForDelete = $id > 0 ? $storage->getResultById($id) : null;
+            if (!$existingForDelete) {
+                $flashError = 'Unable to delete match time.';
+            } elseif (!$isAdmin && (int)$existingForDelete['user_id'] !== (int)$user['id']) {
+                $flashError = 'Only administrators can delete other shooters\' match times.';
+            } elseif ($storage->deleteResult($id)) {
                 $flashSuccess = 'Match time deleted.';
             } else {
                 $flashError = 'Unable to delete match time.';
@@ -165,7 +176,10 @@ $usedGuns = $storage->getUsedGuns();
 
 $editingResult = null;
 if (isset($_GET['edit'])) {
-    $editingResult = $storage->getResultById((int)$_GET['edit']);
+    $candidate = $storage->getResultById((int)$_GET['edit']);
+    if ($candidate && ($isAdmin || (int)$candidate['user_id'] === (int)$user['id'])) {
+        $editingResult = $candidate;
+    }
 }
 $openNewModal = isset($_GET['new']) || $editingResult !== null;
 $prefillMatchId = (int)($_GET['match_id'] ?? 0);
@@ -361,19 +375,21 @@ render_header('Match Times', 'results', $user, $auth);
                             <td class="num mono"><?= (float)$r['penalties'] > 0 ? '+' . e(format_time((float)$r['penalties'])) : '0.00' ?></td>
                             <td class="num mono strong-time"><?= e(format_time((float)$r['total_time'])) ?>s</td>
                             <td class="actions-col">
-                                <div class="row-actions">
-                                    <button
-                                        type="button"
-                                        class="btn btn-ghost btn-xs js-edit-result"
-                                        data-result='<?= e(json_encode($r, JSON_UNESCAPED_UNICODE)) ?>'
-                                    >Edit</button>
-                                    <form method="post" action="results.php" class="inline-form" onsubmit="return confirm('Delete this match time?');">
-                                        <input type="hidden" name="csrf_token" value="<?= e($auth->csrfToken()) ?>">
-                                        <input type="hidden" name="action" value="delete_result">
-                                        <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                                        <button type="submit" class="btn btn-danger-ghost btn-xs">Delete</button>
-                                    </form>
-                                </div>
+                                <?php if ($isAdmin || (int)$r['user_id'] === (int)$user['id']): ?>
+                                    <div class="row-actions">
+                                        <button
+                                            type="button"
+                                            class="btn btn-ghost btn-xs js-edit-result"
+                                            data-result='<?= e(json_encode($r, JSON_UNESCAPED_UNICODE)) ?>'
+                                        >Edit</button>
+                                        <form method="post" action="results.php" class="inline-form" onsubmit="return confirm('Delete this match time?');">
+                                            <input type="hidden" name="csrf_token" value="<?= e($auth->csrfToken()) ?>">
+                                            <input type="hidden" name="action" value="delete_result">
+                                            <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                                            <button type="submit" class="btn btn-danger-ghost btn-xs">Delete</button>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -422,10 +438,11 @@ render_header('Match Times', 'results', $user, $auth);
                 <div class="field">
                     <label for="result-user">Shooter</label>
                     <select id="result-user" name="user_id" required>
-                        <?php foreach ($users as $u): ?>
-                            <?php
+                        <?php
+                        $selectableUsers = $isAdmin ? $users : [$user];
+                        foreach ($selectableUsers as $u):
                             $selectedUid = $editingResult ? (int)$editingResult['user_id'] : (int)$user['id'];
-                            ?>
+                        ?>
                             <option
                                 value="<?= (int)$u['id'] ?>"
                                 data-division="<?= e($u['default_division'] ?? 'Amateur Civilian') ?>"
