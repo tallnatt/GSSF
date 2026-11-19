@@ -22,6 +22,13 @@ function render_header(string $title, string $activeNav, array $user, Auth $auth
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function(){
+            var t = localStorage.getItem('gssf_theme');
+            if (!t) { t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -44,6 +51,7 @@ function render_header(string $title, string $activeNav, array $user, Auth $auth
         </nav>
 
         <div class="user-menu">
+            <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" aria-label="Toggle light or dark mode">Dark Mode</button>
             <span class="user-pill">
                 <span class="color-dot" style="background-color: <?= $userColor ?>;"></span>
                 <span class="user-name"><?= $displayName ?></span>

@@ -39,10 +39,20 @@ $csrf = e($auth->csrfToken());
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function(){
+            var t = localStorage.getItem('gssf_theme');
+            if (!t) { t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="auth-body">
 <main class="auth-wrapper">
+    <div class="auth-theme-bar">
+        <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-sm" aria-label="Toggle light or dark mode">Dark Mode</button>
+    </div>
     <section class="auth-card" aria-labelledby="login-heading">
         <div class="auth-brand">
             <span class="brand-mark" aria-hidden="true">G</span>
@@ -75,6 +85,24 @@ $csrf = e($auth->csrfToken());
         <button type="button" id="btn-passkey-login" class="btn btn-secondary btn-block">Sign in with Passkey</button>
     </section>
 </main>
+<script>
+    (function(){
+        var btn = document.getElementById('btn-theme-toggle');
+        if (!btn) return;
+        function sync() {
+            var cur = document.documentElement.getAttribute('data-theme') || 'light';
+            btn.textContent = cur === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+        sync();
+        btn.addEventListener('click', function() {
+            var cur = document.documentElement.getAttribute('data-theme') || 'light';
+            var next = cur === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('gssf_theme', next);
+            sync();
+        });
+    })();
+</script>
 <script src="assets/js/passkeys.js"></script>
 </body>
 </html>

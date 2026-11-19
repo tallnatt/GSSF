@@ -1,4 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const themeToggleBtn = document.getElementById('btn-theme-toggle');
+    if (themeToggleBtn) {
+        const syncThemeLabel = () => {
+            const cur = document.documentElement.getAttribute('data-theme') || 'light';
+            themeToggleBtn.textContent = cur === 'dark' ? 'Light Mode' : 'Dark Mode';
+        };
+        syncThemeLabel();
+        themeToggleBtn.addEventListener('click', () => {
+            const cur = document.documentElement.getAttribute('data-theme') || 'light';
+            const next = cur === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('gssf_theme', next);
+            syncThemeLabel();
+        });
+    }
+
     const openModal = (modalId) => {
         const modal = document.getElementById(modalId);
         if (modal) {

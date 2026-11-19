@@ -133,8 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Gridlines & Y labels
         yTicks.forEach((v) => {
             const y = yForVal(v).toFixed(1);
-            svg += `<line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" stroke="#e2dfd7" stroke-dasharray="3,3" />`;
-            svg += `<text x="${margin.left - 8}" y="${Number(y) + 4}" text-anchor="end" font-size="11" fill="#71717a" font-family="IBM Plex Mono, monospace">${v.toFixed(1)}s</text>`;
+            svg += `<line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" stroke="var(--border)" stroke-dasharray="3,3" />`;
+            svg += `<text x="${margin.left - 8}" y="${Number(y) + 4}" text-anchor="end" font-size="11" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">${v.toFixed(1)}s</text>`;
         });
 
         // X-axis labels
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dates.forEach((d, idx) => {
             if (idx % step !== 0 && idx !== dates.length - 1) return;
             const x = xForDate(d).toFixed(1);
-            svg += `<text x="${x}" y="${height - 14}" text-anchor="middle" font-size="11" fill="#71717a" font-family="IBM Plex Mono, monospace">${escapeHtml(d)}</text>`;
+            svg += `<text x="${x}" y="${height - 14}" text-anchor="middle" font-size="11" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">${escapeHtml(d)}</text>`;
         });
 
         // Series lines & points
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cx = xForDate(p.match_date).toFixed(1);
                 const cy = yForVal(Number(p[metric])).toFixed(1);
                 const val = Number(p[metric]).toFixed(2);
-                svg += `<circle class="js-chart-pt" cx="${cx}" cy="${cy}" r="5" fill="${escapeHtml(series.color)}" stroke="#ffffff" stroke-width="2"
+                svg += `<circle class="js-chart-pt" cx="${cx}" cy="${cy}" r="5" fill="${escapeHtml(series.color)}" stroke="var(--surface)" stroke-width="2"
                     data-shooter="${escapeHtml(series.name)}"
                     data-match="${escapeHtml(p.match_name)}"
                     data-date="${escapeHtml(p.match_date)}"
@@ -260,8 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i <= 4; i++) {
             const v = (maxVal * i) / 4;
             const y = yForVal(v).toFixed(1);
-            svg += `<line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" stroke="#e2dfd7" stroke-dasharray="3,3" />`;
-            svg += `<text x="${margin.left - 8}" y="${Number(y) + 4}" text-anchor="end" font-size="11" fill="#71717a" font-family="IBM Plex Mono, monospace">${v.toFixed(1)}s</text>`;
+            svg += `<line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" stroke="var(--border)" stroke-dasharray="3,3" />`;
+            svg += `<text x="${margin.left - 8}" y="${Number(y) + 4}" text-anchor="end" font-size="11" fill="var(--text-faint)" font-family="IBM Plex Mono, monospace">${v.toFixed(1)}s</text>`;
         }
 
         const groupW = plotW / stages.length;
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupX = margin.left + sIdx * groupW;
             const startX = groupX + (groupW - totalBarsW) / 2;
 
-            svg += `<text x="${(groupX + groupW / 2).toFixed(1)}" y="${height - 12}" text-anchor="middle" font-size="12" font-weight="600" fill="#18181b">${escapeHtml(st.label)}</text>`;
+            svg += `<text x="${(groupX + groupW / 2).toFixed(1)}" y="${height - 12}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--text)">${escapeHtml(st.label)}</text>`;
 
             shooters.forEach((sh, shIdx) => {
                 const val = computed.get(sh.id)[st.key];
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const y = yForVal(val);
                 const h = margin.top + plotH - y;
                 svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1, h).toFixed(1)}" rx="3" fill="${escapeHtml(sh.color)}" />`;
-                svg += `<text x="${(x + barW / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="10" fill="#52525b" font-family="IBM Plex Mono, monospace">${val.toFixed(1)}</text>`;
+                svg += `<text x="${(x + barW / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--text-muted)" font-family="IBM Plex Mono, monospace">${val.toFixed(1)}</text>`;
             });
         });
 
