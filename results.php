@@ -6,7 +6,7 @@ require_once __DIR__ . '/src/bootstrap.php';
 $user = $auth->requireLogin();
 $users = $storage->getUsers(false);
 $divisions = gssf_divisions();
-$guns = gssf_guns();
+$gunGroups = gssf_guns_by_generation();
 
 $flashSuccess = '';
 $flashError = '';
@@ -455,11 +455,15 @@ render_header('Match Times', 'results', $user, $auth);
                         <option value="">— Select gun —</option>
                         <?php
                         $selectedGun = $editingResult['gun'] ?? '';
-                        foreach ($guns as $g):
+                        foreach ($gunGroups as $genLabel => $models):
                         ?>
-                            <option value="<?= e($g) ?>" <?= $selectedGun === $g ? 'selected' : '' ?>>
-                                <?= e($g) ?>
-                            </option>
+                            <optgroup label="<?= e($genLabel) ?>">
+                                <?php foreach ($models as $g): ?>
+                                    <option value="<?= e($g) ?>" <?= $selectedGun === $g ? 'selected' : '' ?>>
+                                        <?= e($g) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
                         <?php endforeach; ?>
                     </select>
                 </div>

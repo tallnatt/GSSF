@@ -31,95 +31,153 @@ function gssf_divisions(): array
     ];
 }
 
+function gssf_guns_by_generation(): array
+{
+    $groups = [
+        'Gen 1' => [
+            'G17 Gen 1 (9mm)',
+        ],
+        'Gen 2' => [
+            'G22 Gen 2 (.40 S&W)',
+            'G23 Gen 2 (.40 S&W)',
+            'G21 Gen 2 (.45 ACP)',
+            'G17 Gen 2 (9mm)',
+            'G19 Gen 2 (9mm)',
+            'G20 Gen 2 (10mm)',
+        ],
+        'Gen 3' => [
+            'G22 Gen 3 (.40 S&W)',
+            'G23 Gen 3 (.40 S&W)',
+            'G27 Gen 3 (.40 S&W)',
+            'G35 Gen 3 (.40 S&W)',
+            'G21 Gen 3 (.45 ACP)',
+            'G30 Gen 3 (.45 ACP)',
+            'G17 Gen 3 (9mm)',
+            'G19 Gen 3 (9mm)',
+            'G26 Gen 3 (9mm)',
+            'G34 Gen 3 (9mm)',
+            'G20 Gen 3 (10mm)',
+            'G29 Gen 3 (10mm)',
+        ],
+        'Gen 4' => [
+            'G22 Gen 4 (.40 S&W)',
+            'G23 Gen 4 (.40 S&W)',
+            'G27 Gen 4 (.40 S&W)',
+            'G35 Gen 4 (.40 S&W)',
+            'G35 Gen 4 MOS (.40 S&W)',
+            'G21 Gen 4 (.45 ACP)',
+            'G30 Gen 4 (.45 ACP)',
+            'G41 Gen 4 (.45 ACP)',
+            'G41 Gen 4 MOS (.45 ACP)',
+            'G17 Gen 4 (9mm)',
+            'G17 Gen 4 MOS (9mm)',
+            'G19 Gen 4 (9mm)',
+            'G19 Gen 4 MOS (9mm)',
+            'G26 Gen 4 (9mm)',
+            'G34 Gen 4 (9mm)',
+            'G34 Gen 4 MOS (9mm)',
+            'G20 Gen 4 (10mm)',
+            'G29 Gen 4 (10mm)',
+            'G40 Gen 4 MOS (10mm)',
+        ],
+        'Gen 5' => [
+            'G44 Gen 5 (.22 LR)',
+            'G22 Gen 5 (.40 S&W)',
+            'G22 Gen 5 MOS (.40 S&W)',
+            'G23 Gen 5 (.40 S&W)',
+            'G23 Gen 5 MOS (.40 S&W)',
+            'G27 Gen 5 (.40 S&W)',
+            'G21 Gen 5 MOS (.45 ACP)',
+            'G30 Gen 5 (.45 ACP)',
+            'G17 Gen 5 (9mm)',
+            'G17 Gen 5 MOS (9mm)',
+            'G19 Gen 5 (9mm)',
+            'G19 Gen 5 MOS (9mm)',
+            'G19X Gen 5 (9mm)',
+            'G19X Gen 5 MOS (9mm)',
+            'G26 Gen 5 (9mm)',
+            'G26 Gen 5 MOS (9mm)',
+            'G34 Gen 5 (9mm)',
+            'G34 Gen 5 MOS (9mm)',
+            'G45 Gen 5 (9mm)',
+            'G45 Gen 5 MOS (9mm)',
+            'G47 Gen 5 MOS (9mm)',
+            'G49 Gen 5 MOS (9mm)',
+            'G20 Gen 5 MOS (10mm)',
+            'G29 Gen 5 (10mm)',
+        ],
+        'Gen V' => [
+            'G44 Gen V (.22 LR)',
+            'G23 Gen V (.40 S&W)',
+            'G21 Gen V MOS (.45 ACP)',
+            'G17 Gen V (9mm)',
+            'G19 Gen V (9mm)',
+            'G19X Gen V (9mm)',
+            'G26 Gen V (9mm)',
+            'G45 Gen V (9mm)',
+            'G20 Gen V MOS (10mm)',
+        ],
+        'Gen 6' => [
+            'G17 Gen 6 (9mm)',
+            'G19 Gen 6 (9mm)',
+            'G45 Gen 6 (9mm)',
+            'G49 Gen 6 (9mm)',
+        ],
+        'Slimline' => [
+            'G42 Slimline (.380 ACP)',
+            'G43 Slimline (9mm)',
+            'G43X Slimline (9mm)',
+            'G43X Slimline MOS (9mm)',
+            'G48 Slimline (9mm)',
+            'G48 Slimline MOS (9mm)',
+        ],
+        'Other' => [
+            'Other',
+        ],
+    ];
+
+    $caliberOrder = [
+        '.22 LR' => 1,
+        '.380 ACP' => 2,
+        '.40 S&W' => 3,
+        '.45 ACP' => 4,
+        '9mm' => 5,
+        '10mm' => 6,
+    ];
+
+    foreach ($groups as &$models) {
+        usort($models, static function (string $a, string $b) use ($caliberOrder): int {
+            preg_match('/\(([^)]+)\)$/', $a, $ca);
+            preg_match('/\(([^)]+)\)$/', $b, $cb);
+            $calA = $caliberOrder[$ca[1] ?? ''] ?? 99;
+            $calB = $caliberOrder[$cb[1] ?? ''] ?? 99;
+            if ($calA !== $calB) {
+                return $calA <=> $calB;
+            }
+            preg_match('/^G(\d+)/', $a, $ma);
+            preg_match('/^G(\d+)/', $b, $mb);
+            $numA = (int)($ma[1] ?? 999);
+            $numB = (int)($mb[1] ?? 999);
+            if ($numA !== $numB) {
+                return $numA <=> $numB;
+            }
+            return strcmp($a, $b);
+        });
+    }
+    unset($models);
+
+    return $groups;
+}
+
 function gssf_guns(): array
 {
-    return [
-        // G17 (9mm)
-        'G17 Gen 1 (9mm)',
-        'G17 Gen 2 (9mm)',
-        'G17 Gen 3 (9mm)',
-        'G17 Gen 4 (9mm)',
-        'G17 Gen 4 MOS (9mm)',
-        'G17 Gen 5 (9mm)',
-        'G17 Gen 5 MOS (9mm)',
-        // G19 (9mm)
-        'G19 Gen 2 (9mm)',
-        'G19 Gen 3 (9mm)',
-        'G19 Gen 4 (9mm)',
-        'G19 Gen 4 MOS (9mm)',
-        'G19 Gen 5 (9mm)',
-        'G19 Gen 5 MOS (9mm)',
-        // G19X (9mm)
-        'G19X (9mm)',
-        'G19X MOS (9mm)',
-        // G20 (10mm)
-        'G20 Gen 2 (10mm)',
-        'G20 Gen 3 (10mm)',
-        'G20 Gen 4 (10mm)',
-        'G20 Gen 5 MOS (10mm)',
-        // G21 (.45 ACP)
-        'G21 Gen 2 (.45 ACP)',
-        'G21 Gen 3 (.45 ACP)',
-        'G21 Gen 4 (.45 ACP)',
-        'G21 Gen 5 MOS (.45 ACP)',
-        // G22 (.40 S&W)
-        'G22 Gen 2 (.40 S&W)',
-        'G22 Gen 3 (.40 S&W)',
-        'G22 Gen 4 (.40 S&W)',
-        'G22 Gen 5 (.40 S&W)',
-        'G22 Gen 5 MOS (.40 S&W)',
-        // G23 (.40 S&W)
-        'G23 Gen 2 (.40 S&W)',
-        'G23 Gen 3 (.40 S&W)',
-        'G23 Gen 4 (.40 S&W)',
-        'G23 Gen 5 (.40 S&W)',
-        'G23 Gen 5 MOS (.40 S&W)',
-        // G26 (9mm)
-        'G26 Gen 3 (9mm)',
-        'G26 Gen 4 (9mm)',
-        'G26 Gen 5 (9mm)',
-        'G26 Gen 5 MOS (9mm)',
-        // G27 (.40 S&W)
-        'G27 Gen 3 (.40 S&W)',
-        'G27 Gen 4 (.40 S&W)',
-        'G27 Gen 5 (.40 S&W)',
-        // G29 (10mm)
-        'G29 Gen 3 (10mm)',
-        'G29 Gen 4 (10mm)',
-        'G29 Gen 5 (10mm)',
-        // G30 (.45 ACP)
-        'G30 Gen 3 (.45 ACP)',
-        'G30 Gen 4 (.45 ACP)',
-        'G30 Gen 5 (.45 ACP)',
-        // G34 (9mm)
-        'G34 Gen 3 (9mm)',
-        'G34 Gen 4 (9mm)',
-        'G34 Gen 4 MOS (9mm)',
-        'G34 Gen 5 (9mm)',
-        'G34 Gen 5 MOS (9mm)',
-        // G35 (.40 S&W)
-        'G35 Gen 3 (.40 S&W)',
-        'G35 Gen 4 (.40 S&W)',
-        'G35 Gen 4 MOS (.40 S&W)',
-        // G40 (10mm)
-        'G40 Gen 4 MOS (10mm)',
-        // G41 (.45 ACP)
-        'G41 Gen 4 (.45 ACP)',
-        'G41 Gen 4 MOS (.45 ACP)',
-        // Slimline & Specialty
-        'G42 (.380 ACP)',
-        'G43 (9mm)',
-        'G43X (9mm)',
-        'G43X MOS (9mm)',
-        'G44 (.22 LR)',
-        'G45 (9mm)',
-        'G45 MOS (9mm)',
-        'G47 Gen 5 MOS (9mm)',
-        'G48 (9mm)',
-        'G48 MOS (9mm)',
-        'G49 Gen 5 MOS (9mm)',
-        'Other',
-    ];
+    $all = [];
+    foreach (gssf_guns_by_generation() as $models) {
+        foreach ($models as $m) {
+            $all[] = $m;
+        }
+    }
+    return $all;
 }
 
 function shooter_palette(): array
