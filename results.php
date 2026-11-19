@@ -37,14 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $fiveStrings = $parseStrings($_POST['five_strings'] ?? [], 3);
             $fivePenCounts = [
+                'p0' => max(0, (int)($_POST['five_pen_0'] ?? 0)),
                 'p1' => max(0, (int)($_POST['five_pen_1'] ?? 0)),
-                'p2' => max(0, (int)($_POST['five_pen_2'] ?? 0)),
                 'p3' => max(0, (int)($_POST['five_pen_3'] ?? 0)),
                 'miss' => max(0, (int)($_POST['five_pen_miss'] ?? 0)),
                 'proc' => max(0, (int)($_POST['five_pen_proc'] ?? 0)),
             ];
             $fivePenalties = round(
-                $fivePenCounts['p1'] * 1 + $fivePenCounts['p2'] * 2 + $fivePenCounts['p3'] * 3
+                $fivePenCounts['p1'] * 1 + $fivePenCounts['p3'] * 3
                 + $fivePenCounts['miss'] * 10 + $fivePenCounts['proc'] * 10,
                 2
             );
@@ -61,14 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $glockmStrings = $parseStrings($_POST['glockm_strings'] ?? [], 3);
             $glockmPenCounts = [
+                'p0' => max(0, (int)($_POST['glockm_pen_0'] ?? 0)),
                 'p1' => max(0, (int)($_POST['glockm_pen_1'] ?? 0)),
-                'p2' => max(0, (int)($_POST['glockm_pen_2'] ?? 0)),
                 'p3' => max(0, (int)($_POST['glockm_pen_3'] ?? 0)),
                 'miss' => max(0, (int)($_POST['glockm_pen_miss'] ?? 0)),
                 'proc' => max(0, (int)($_POST['glockm_pen_proc'] ?? 0)),
             ];
             $glockmPenalties = round(
-                $glockmPenCounts['p1'] * 1 + $glockmPenCounts['p2'] * 2 + $glockmPenCounts['p3'] * 3
+                $glockmPenCounts['p1'] * 1 + $glockmPenCounts['p3'] * 3
                 + $glockmPenCounts['miss'] * 10 + $glockmPenCounts['proc'] * 10,
                 2
             );
@@ -188,12 +188,15 @@ if ($editingResult) {
 }
 
 $fiveEditStrings = $editStageDetails['five_to_glock']['strings'] ?? ($editingResult ? [(float)$editingResult['five_to_glock'], 0, 0] : [0, 0, 0]);
+$fiveEditPenCounts = $editStageDetails['five_to_glock']['penalty_counts'] ?? ['p0' => 0, 'p1' => 0, 'p3' => 0, 'miss' => 0, 'proc' => 0];
 $fiveEditPen = $editStageDetails['five_to_glock']['penalties'] ?? 0;
 
 $platesEditStrings = $editStageDetails['glock_the_plates']['strings'] ?? ($editingResult ? [(float)$editingResult['glock_the_plates'], 0, 0, 0] : [0, 0, 0, 0]);
+$platesEditPenCounts = $editStageDetails['glock_the_plates']['penalty_counts'] ?? ['miss' => 0, 'proc' => 0];
 $platesEditPen = $editStageDetails['glock_the_plates']['penalties'] ?? 0;
 
 $glockmEditStrings = $editStageDetails['glock_m']['strings'] ?? ($editingResult ? [(float)$editingResult['glock_m'], 0, 0] : [0, 0, 0]);
+$glockmEditPenCounts = $editStageDetails['glock_m']['penalty_counts'] ?? ['p0' => 0, 'p1' => 0, 'p3' => 0, 'miss' => 0, 'proc' => 0];
 $glockmEditPen = $editStageDetails['glock_m']['penalties'] ?? 0;
 
 render_header('Match Times', 'results', $user, $auth);
@@ -489,12 +492,12 @@ render_header('Match Times', 'results', $user, $auth);
                 <div class="stage-penalties-label">Penalties (count)</div>
                 <div class="stage-penalties-grid stage-penalties-3">
                     <div class="field">
-                        <label for="five-pen-1">1 Second</label>
-                        <input type="number" step="1" min="0" id="five-pen-1" name="five_pen_1" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p1'] ?? 0) ?>">
+                        <label for="five-pen-0">0 Seconds</label>
+                        <input type="number" step="1" min="0" id="five-pen-0" name="five_pen_0" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p0'] ?? 0) ?>">
                     </div>
                     <div class="field">
-                        <label for="five-pen-2">2 Seconds</label>
-                        <input type="number" step="1" min="0" id="five-pen-2" name="five_pen_2" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p2'] ?? 0) ?>">
+                        <label for="five-pen-1">1 Second</label>
+                        <input type="number" step="1" min="0" id="five-pen-1" name="five_pen_1" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p1'] ?? 0) ?>">
                     </div>
                     <div class="field">
                         <label for="five-pen-3">3 Seconds</label>
@@ -537,12 +540,12 @@ render_header('Match Times', 'results', $user, $auth);
                 <div class="stage-penalties-label">Penalties (count)</div>
                 <div class="stage-penalties-grid stage-penalties-3">
                     <div class="field">
-                        <label for="glockm-pen-1">1 Second</label>
-                        <input type="number" step="1" min="0" id="glockm-pen-1" name="glockm_pen_1" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p1'] ?? 0) ?>">
+                        <label for="glockm-pen-0">0 Seconds</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-0" name="glockm_pen_0" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p0'] ?? 0) ?>">
                     </div>
                     <div class="field">
-                        <label for="glockm-pen-2">2 Seconds</label>
-                        <input type="number" step="1" min="0" id="glockm-pen-2" name="glockm_pen_2" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p2'] ?? 0) ?>">
+                        <label for="glockm-pen-1">1 Second</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-1" name="glockm_pen_1" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p1'] ?? 0) ?>">
                     </div>
                     <div class="field">
                         <label for="glockm-pen-3">3 Seconds</label>

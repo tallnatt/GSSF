@@ -59,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const calcFiveOrGlockmPenalties = (prefix) => {
         return (
             intVal(`${prefix}-pen-1`) * 1 +
-            intVal(`${prefix}-pen-2`) * 2 +
             intVal(`${prefix}-pen-3`) * 3 +
             intVal(`${prefix}-pen-miss`) * 10 +
             intVal(`${prefix}-pen-proc`) * 10
@@ -146,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('result-match-id', '');
         setVal('result-gun', '');
         setInputsFromArray('.js-five-string', [], '');
+        setVal('five-pen-0', '0');
         setVal('five-pen-1', '0');
-        setVal('five-pen-2', '0');
         setVal('five-pen-3', '0');
         setVal('five-pen-miss', '0');
         setVal('five-pen-proc', '0');
@@ -155,8 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('plates-pen-miss', '0');
         setVal('plates-pen-proc', '0');
         setInputsFromArray('.js-glockm-string', [], '');
+        setVal('glockm-pen-0', '0');
         setVal('glockm-pen-1', '0');
-        setVal('glockm-pen-2', '0');
         setVal('glockm-pen-3', '0');
         setVal('glockm-pen-miss', '0');
         setVal('glockm-pen-proc', '0');
@@ -207,15 +206,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details && details.five_to_glock) {
                 setInputsFromArray('.js-five-string', details.five_to_glock.strings || [], '0.00');
                 const pc = details.five_to_glock.penalty_counts || {};
+                setVal('five-pen-0', pc.p0 ?? 0);
                 setVal('five-pen-1', pc.p1 ?? 0);
-                setVal('five-pen-2', pc.p2 ?? 0);
                 setVal('five-pen-3', pc.p3 ?? 0);
                 setVal('five-pen-miss', pc.miss ?? 0);
                 setVal('five-pen-proc', pc.proc ?? 0);
             } else {
                 setInputsFromArray('.js-five-string', [Number(data.five_to_glock || 0), 0, 0], '0.00');
+                setVal('five-pen-0', 0);
                 setVal('five-pen-1', 0);
-                setVal('five-pen-2', 0);
                 setVal('five-pen-3', 0);
                 setVal('five-pen-miss', 0);
                 setVal('five-pen-proc', 0);
@@ -235,15 +234,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details && details.glock_m) {
                 setInputsFromArray('.js-glockm-string', details.glock_m.strings || [], '0.00');
                 const pc = details.glock_m.penalty_counts || {};
+                setVal('glockm-pen-0', pc.p0 ?? 0);
                 setVal('glockm-pen-1', pc.p1 ?? 0);
-                setVal('glockm-pen-2', pc.p2 ?? 0);
                 setVal('glockm-pen-3', pc.p3 ?? 0);
                 setVal('glockm-pen-miss', pc.miss ?? 0);
                 setVal('glockm-pen-proc', pc.proc ?? 0);
             } else {
                 setInputsFromArray('.js-glockm-string', [Number(data.glock_m || 0), 0, 0], '0.00');
+                setVal('glockm-pen-0', 0);
                 setVal('glockm-pen-1', 0);
-                setVal('glockm-pen-2', 0);
                 setVal('glockm-pen-3', 0);
                 setVal('glockm-pen-miss', 0);
                 setVal('glockm-pen-proc', 0);
