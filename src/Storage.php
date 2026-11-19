@@ -211,6 +211,24 @@ class Storage
         );
 
         CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id);
+
+        CREATE TABLE IF NOT EXISTS matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            match_name TEXT NOT NULL,
+            match_date TEXT NOT NULL,
+            location TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(match_date);
+
+        CREATE TABLE IF NOT EXISTS match_shooters (
+            match_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            PRIMARY KEY (match_id, user_id),
+            FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
         ";
 
         if (!$this->useSqliteCli) {
@@ -483,6 +501,156 @@ class Storage
     }
 
     // -------------------------------------------------------------------------
+    // Matches
+    // -------------------------------------------------------------------------
+
+    public function getMatches(): array
+    {
+        $matches = $this->dbAll('SELECT * FROM matches ORDER BY match_date DESC, id DESC');
+        if (empty($matches)) {
+            return [];
+        }
+
+        $shootersRows = $this->dbAll(
+            'SELECT ms.match_id, u.id AS user_id, u.display_name, u.color
+             FROM match_shooters ms
+             JOIN users u ON u.id = ms.user_id
+             ORDER BY u.display_name ASC'
+        );
+
+        $shootersByMatch = [];
+        foreach ($shootersRows as $row) {
+            $mid = (int)$row['match_id'];
+            $shootersByMatch[$mid][] = [
+                'id' => (int)$row['user_id'],
+                'display_name' => $row['display_name'],
+                'color' => $row['color'] ?? '#1d4ed8',
+            ];
+        }
+
+        foreach ($matches as &$m) {
+            $mid = (int)$m['id'];
+            $m['shooters'] = $shootersByMatch[$mid] ?? [];
+            $m['shooter_ids'] = array_map(fn($s) => $s['id'], $m['shooters']);
+        }
+        unset($m);
+
+        return $matches;
+    }
+
+    public function getMatchById(int $id): ?array
+    {
+        $m = $this->dbOne('SELECT * FROM matches WHERE id = ? LIMIT 1', [$id]);
+        if (!$m) {
+            return null;
+        }
+        $shootersRows = $this->dbAll(
+            'SELECT u.id AS user_id, u.display_name, u.color
+             FROM match_shooters ms
+             JOIN users u ON u.id = ms.user_id
+             WHERE ms.match_id = ?
+             ORDER BY u.display_name ASC',
+            [$id]
+        );
+        $m['shooters'] = array_map(fn($r) => [
+            'id' => (int)$r['user_id'],
+            'display_name' => $r['display_name'],
+            'color' => $r['color'] ?? '#1d4ed8',
+        ], $shootersRows);
+        $m['shooter_ids'] = array_map(fn($s) => $s['id'], $m['shooters']);
+        return $m;
+    }
+
+    public function createMatch(array $data): int
+    {
+        $now = date('Y-m-d H:i:s');
+        $matchId = $this->dbInsert(
+            'INSERT INTO matches (match_name, match_date, location, created_at) VALUES (?, ?, ?, ?)',
+            [
+                trim($data['match_name']),
+                $data['match_date'],
+                trim($data['location'] ?? ''),
+                $now,
+            ]
+        );
+        $this->syncMatchShooters($matchId, $data['shooter_ids'] ?? []);
+        return $matchId;
+    }
+
+    public function updateMatch(int $id, array $data): bool
+    {
+        $this->dbExec(
+            'UPDATE matches SET match_name = ?, match_date = ?, location = ? WHERE id = ?',
+            [
+                trim($data['match_name']),
+                $data['match_date'],
+                trim($data['location'] ?? ''),
+                $id,
+            ]
+        );
+        $this->syncMatchShooters($id, $data['shooter_ids'] ?? []);
+        return true;
+    }
+
+    public function deleteMatch(int $id): bool
+    {
+        return $this->dbExec('DELETE FROM matches WHERE id = ?', [$id]) > 0;
+    }
+
+    private function syncMatchShooters(int $matchId, array $shooterIds): void
+    {
+        $this->dbExec('DELETE FROM match_shooters WHERE match_id = ?', [$matchId]);
+        $seen = [];
+        foreach ($shooterIds as $uid) {
+            $uid = (int)$uid;
+            if ($uid > 0 && !isset($seen[$uid])) {
+                $seen[$uid] = true;
+                $this->dbExec(
+                    'INSERT INTO match_shooters (match_id, user_id) VALUES (?, ?)',
+                    [$matchId, $uid]
+                );
+            }
+        }
+    }
+
+    public function getShooterDivisionTotals(array $filters = []): array
+    {
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['user_id'])) {
+            $where[] = 'r.user_id = ?';
+            $params[] = (int)$filters['user_id'];
+        }
+        if (!empty($filters['division'])) {
+            $where[] = 'r.division = ?';
+            $params[] = $filters['division'];
+        }
+        if (!empty($filters['search'])) {
+            $where[] = '(r.match_name LIKE ? OR r.location LIKE ? OR r.notes LIKE ?)';
+            $q = '%' . $filters['search'] . '%';
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+        }
+
+        $sql = 'SELECT r.user_id, u.display_name AS shooter_name, u.color AS shooter_color, r.division,
+                       COUNT(*) AS match_count,
+                       SUM(r.total_time) AS sum_total_time,
+                       MIN(r.total_time) AS best_total_time,
+                       AVG(r.total_time) AS avg_total_time
+                FROM match_results r
+                JOIN users u ON u.id = r.user_id';
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' GROUP BY r.user_id, u.display_name, u.color, r.division
+                  ORDER BY u.display_name ASC, r.division ASC';
+
+        return $this->dbAll($sql, $params);
+    }
+
+    // -------------------------------------------------------------------------
     // Initial seed for first-run experience
     // -------------------------------------------------------------------------
 
@@ -490,6 +658,7 @@ class Storage
     {
         $existing = $this->dbOne('SELECT COUNT(*) AS cnt FROM users');
         if ((int)($existing['cnt'] ?? 0) > 0) {
+            $this->backfillMatchesIfEmpty();
             return;
         }
 
@@ -552,6 +721,36 @@ class Storage
                 'notes' => $m[9],
                 'created_by' => $adminId,
             ]);
+        }
+
+        $this->backfillMatchesIfEmpty();
+    }
+
+    private function backfillMatchesIfEmpty(): void
+    {
+        $cntRow = $this->dbOne('SELECT COUNT(*) AS cnt FROM matches');
+        if ((int)($cntRow['cnt'] ?? 0) > 0) {
+            return;
+        }
+        $rows = $this->dbAll('SELECT match_name, match_date, location, user_id FROM match_results ORDER BY match_date DESC');
+        if (empty($rows)) {
+            return;
+        }
+        $grouped = [];
+        foreach ($rows as $r) {
+            $key = $r['match_date'] . '|' . $r['match_name'] . '|' . $r['location'];
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'match_name' => $r['match_name'],
+                    'match_date' => $r['match_date'],
+                    'location' => $r['location'],
+                    'shooter_ids' => [],
+                ];
+            }
+            $grouped[$key]['shooter_ids'][] = (int)$r['user_id'];
+        }
+        foreach ($grouped as $m) {
+            $this->createMatch($m);
         }
     }
 }

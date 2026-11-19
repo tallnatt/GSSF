@@ -73,22 +73,27 @@ $filters = [
 ];
 
 $results = $storage->getResults($filters);
+$divisionTotals = $storage->getShooterDivisionTotals($filters);
+$savedMatches = $storage->getMatches();
 
 $editingResult = null;
 if (isset($_GET['edit'])) {
     $editingResult = $storage->getResultById((int)$_GET['edit']);
 }
 $openNewModal = isset($_GET['new']) || $editingResult !== null;
+$prefillMatchName = trim((string)($_GET['match_name'] ?? ''));
+$prefillMatchDate = trim((string)($_GET['match_date'] ?? ''));
+$prefillLocation = trim((string)($_GET['location'] ?? ''));
 
-render_header('Event Times', 'results', $user, $auth);
+render_header('Match Times', 'results', $user, $auth);
 ?>
 <section class="page-head">
     <div>
-        <h1>Event Times</h1>
-        <p class="page-subtitle">Add and edit GSSF stage times for any family member.</p>
+        <h1>Match Times</h1>
+        <p class="page-subtitle">Total times for each shooter in each division, plus detailed stage times.</p>
     </div>
     <div class="page-actions">
-        <button type="button" id="btn-open-result-modal" class="btn btn-primary" data-open-modal="result-modal">+ Add Event Time</button>
+        <button type="button" id="btn-open-result-modal" class="btn btn-primary" data-open-modal="result-modal">+ Add Match Time</button>
     </div>
 </section>
 
@@ -210,7 +215,7 @@ render_header('Event Times', 'results', $user, $auth);
     <div class="modal-backdrop" data-close-modal></div>
     <div class="modal-dialog">
         <div class="modal-header">
-            <h2 id="result-modal-title"><?= $editingResult ? 'Edit Event Time' : 'Add Event Time' ?></h2>
+            <h2 id="result-modal-title"><?= $editingResult ? 'Edit Match Time' : 'Add Match Time' ?></h2>
             <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
         </div>
         <form method="post" action="results.php" id="result-form" class="modal-body">
@@ -219,6 +224,25 @@ render_header('Event Times', 'results', $user, $auth);
             <input type="hidden" name="id" id="result-id" value="<?= $editingResult ? (int)$editingResult['id'] : 0 ?>">
 
             <div class="form-grid">
+                <?php if (!empty($savedMatches)): ?>
+                    <div class="field field-span-2">
+                        <label for="result-saved-match">Select Saved Match (optional quick-fill)</label>
+                        <select id="result-saved-match">
+                            <option value="">— Choose a match or type below —</option>
+                            <?php foreach ($savedMatches as $sm): ?>
+                                <option
+                                    value="<?= (int)$sm['id'] ?>"
+                                    data-name="<?= e($sm['match_name']) ?>"
+                                    data-date="<?= e($sm['match_date']) ?>"
+                                    data-location="<?= e($sm['location']) ?>"
+                                >
+                                    <?= e($sm['match_date']) ?> — <?= e($sm['match_name']) ?><?= !empty($sm['location']) ? ' (' . e($sm['location']) . ')' : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+
                 <div class="field">
                     <label for="result-user">Shooter</label>
                     <select id="result-user" name="user_id" required>
@@ -252,18 +276,18 @@ render_header('Event Times', 'results', $user, $auth);
                 </div>
 
                 <div class="field field-span-2">
-                    <label for="result-match-name">Match / Event Name</label>
-                    <input type="text" id="result-match-name" name="match_name" required value="<?= e($editingResult['match_name'] ?? '') ?>" placeholder="e.g. Spring Classic Regional">
+                    <label for="result-match-name">Match Name</label>
+                    <input type="text" id="result-match-name" name="match_name" required value="<?= e($editingResult['match_name'] ?? $prefillMatchName) ?>" placeholder="e.g. Spring Classic Regional">
                 </div>
 
                 <div class="field">
                     <label for="result-match-date">Match Date</label>
-                    <input type="date" id="result-match-date" name="match_date" required value="<?= e($editingResult['match_date'] ?? date('Y-m-d')) ?>">
+                    <input type="date" id="result-match-date" name="match_date" required value="<?= e($editingResult['match_date'] ?? ($prefillMatchDate !== '' ? $prefillMatchDate : date('Y-m-d'))) ?>">
                 </div>
 
                 <div class="field">
                     <label for="result-location">Location / Club</label>
-                    <input type="text" id="result-location" name="location" value="<?= e($editingResult['location'] ?? '') ?>" placeholder="e.g. Oakdale Range">
+                    <input type="text" id="result-location" name="location" value="<?= e($editingResult['location'] ?? $prefillLocation) ?>" placeholder="e.g. Oakdale Range">
                 </div>
             </div>
 

@@ -149,7 +149,7 @@ render_header('Overview', 'overview', $user, $auth);
 
 <section class="panel">
     <div class="panel-header">
-        <h2>Recent Event Times</h2>
+        <h2>Recent Match Times</h2>
         <a href="results.php" class="text-link">View &amp; edit all &rarr;</a>
     </div>
     <div class="table-wrap">

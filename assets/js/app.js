@@ -162,4 +162,57 @@ document.addEventListener('DOMContentLoaded', () => {
             openModal('user-modal');
         });
     });
+
+    // Saved match quick-fill in Match Times modal
+    const savedMatchSelect = document.getElementById('result-saved-match');
+    if (savedMatchSelect) {
+        savedMatchSelect.addEventListener('change', () => {
+            const opt = savedMatchSelect.options[savedMatchSelect.selectedIndex];
+            if (!opt || !opt.value) return;
+            const nameEl = document.getElementById('result-match-name');
+            const dateEl = document.getElementById('result-match-date');
+            const locEl = document.getElementById('result-location');
+            if (nameEl) nameEl.value = opt.getAttribute('data-name') || '';
+            if (dateEl) dateEl.value = opt.getAttribute('data-date') || '';
+            if (locEl) locEl.value = opt.getAttribute('data-location') || '';
+        });
+    }
+
+    function resetMatchForm() {
+        const title = document.getElementById('match-modal-title');
+        if (title) title.textContent = 'Add Match';
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        };
+        setVal('match-id', '0');
+        setVal('match-name', '');
+        setVal('match-date', new Date().toISOString().slice(0, 10));
+        setVal('match-location', '');
+        document.querySelectorAll('.js-match-shooter-cb').forEach((cb) => {
+            cb.checked = false;
+        });
+    }
+
+    document.querySelectorAll('.js-edit-match').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const data = JSON.parse(btn.getAttribute('data-match') || '{}');
+            const title = document.getElementById('match-modal-title');
+            if (title) title.textContent = 'Edit Match';
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val ?? '';
+            };
+            setVal('match-id', data.id);
+            setVal('match-name', data.match_name);
+            setVal('match-date', data.match_date);
+            setVal('match-location', data.location);
+
+            const selectedIds = new Set((data.shooter_ids || []).map((id) => Number(id)));
+            document.querySelectorAll('.js-match-shooter-cb').forEach((cb) => {
+                cb.checked = selectedIds.has(Number(cb.value));
+            });
+            openModal('match-modal');
+        });
+    });
 });
