@@ -161,6 +161,7 @@ $filters = [
 
 $results = $storage->getResults($filters);
 $divisionTotals = $storage->getShooterDivisionTotals($filters);
+$usedGuns = $storage->getUsedGuns();
 
 $editingResult = null;
 if (isset($_GET['edit'])) {
@@ -242,7 +243,7 @@ render_header('Match Times', 'results', $user, $auth);
             <label for="filter-gun">Gun</label>
             <select id="filter-gun" name="gun">
                 <option value="">All Guns</option>
-                <?php foreach ($guns as $g): ?>
+                <?php foreach ($usedGuns as $g): ?>
                     <option value="<?= e($g) ?>" <?= $filters['gun'] === $g ? 'selected' : '' ?>>
                         <?= e($g) ?>
                     </option>

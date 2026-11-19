@@ -486,6 +486,12 @@ class Storage
         return $this->dbExec('DELETE FROM match_results WHERE id = ?', [$id]) > 0;
     }
 
+    public function getUsedGuns(): array
+    {
+        $rows = $this->dbAll("SELECT DISTINCT gun FROM match_results WHERE gun != '' ORDER BY gun ASC");
+        return array_map(fn($r) => $r['gun'], $rows);
+    }
+
     // -------------------------------------------------------------------------
     // Passkeys (WebAuthn)
     // -------------------------------------------------------------------------

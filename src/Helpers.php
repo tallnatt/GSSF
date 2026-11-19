@@ -34,29 +34,90 @@ function gssf_divisions(): array
 function gssf_guns(): array
 {
     return [
-        'G17',
-        'G19',
-        'G19X',
-        'G20',
-        'G21',
-        'G22',
-        'G23',
-        'G26',
-        'G27',
-        'G29',
-        'G30',
-        'G34',
-        'G35',
-        'G40',
-        'G41',
-        'G42',
-        'G43',
-        'G43X',
-        'G44',
-        'G45',
-        'G47',
-        'G48',
-        'G49',
+        // G17 (9mm)
+        'G17 Gen 1 (9mm)',
+        'G17 Gen 2 (9mm)',
+        'G17 Gen 3 (9mm)',
+        'G17 Gen 4 (9mm)',
+        'G17 Gen 4 MOS (9mm)',
+        'G17 Gen 5 (9mm)',
+        'G17 Gen 5 MOS (9mm)',
+        // G19 (9mm)
+        'G19 Gen 2 (9mm)',
+        'G19 Gen 3 (9mm)',
+        'G19 Gen 4 (9mm)',
+        'G19 Gen 4 MOS (9mm)',
+        'G19 Gen 5 (9mm)',
+        'G19 Gen 5 MOS (9mm)',
+        // G19X (9mm)
+        'G19X (9mm)',
+        'G19X MOS (9mm)',
+        // G20 (10mm)
+        'G20 Gen 2 (10mm)',
+        'G20 Gen 3 (10mm)',
+        'G20 Gen 4 (10mm)',
+        'G20 Gen 5 MOS (10mm)',
+        // G21 (.45 ACP)
+        'G21 Gen 2 (.45 ACP)',
+        'G21 Gen 3 (.45 ACP)',
+        'G21 Gen 4 (.45 ACP)',
+        'G21 Gen 5 MOS (.45 ACP)',
+        // G22 (.40 S&W)
+        'G22 Gen 2 (.40 S&W)',
+        'G22 Gen 3 (.40 S&W)',
+        'G22 Gen 4 (.40 S&W)',
+        'G22 Gen 5 (.40 S&W)',
+        'G22 Gen 5 MOS (.40 S&W)',
+        // G23 (.40 S&W)
+        'G23 Gen 2 (.40 S&W)',
+        'G23 Gen 3 (.40 S&W)',
+        'G23 Gen 4 (.40 S&W)',
+        'G23 Gen 5 (.40 S&W)',
+        'G23 Gen 5 MOS (.40 S&W)',
+        // G26 (9mm)
+        'G26 Gen 3 (9mm)',
+        'G26 Gen 4 (9mm)',
+        'G26 Gen 5 (9mm)',
+        'G26 Gen 5 MOS (9mm)',
+        // G27 (.40 S&W)
+        'G27 Gen 3 (.40 S&W)',
+        'G27 Gen 4 (.40 S&W)',
+        'G27 Gen 5 (.40 S&W)',
+        // G29 (10mm)
+        'G29 Gen 3 (10mm)',
+        'G29 Gen 4 (10mm)',
+        'G29 Gen 5 (10mm)',
+        // G30 (.45 ACP)
+        'G30 Gen 3 (.45 ACP)',
+        'G30 Gen 4 (.45 ACP)',
+        'G30 Gen 5 (.45 ACP)',
+        // G34 (9mm)
+        'G34 Gen 3 (9mm)',
+        'G34 Gen 4 (9mm)',
+        'G34 Gen 4 MOS (9mm)',
+        'G34 Gen 5 (9mm)',
+        'G34 Gen 5 MOS (9mm)',
+        // G35 (.40 S&W)
+        'G35 Gen 3 (.40 S&W)',
+        'G35 Gen 4 (.40 S&W)',
+        'G35 Gen 4 MOS (.40 S&W)',
+        // G40 (10mm)
+        'G40 Gen 4 MOS (10mm)',
+        // G41 (.45 ACP)
+        'G41 Gen 4 (.45 ACP)',
+        'G41 Gen 4 MOS (.45 ACP)',
+        // Slimline & Specialty
+        'G42 (.380 ACP)',
+        'G43 (9mm)',
+        'G43X (9mm)',
+        'G43X MOS (9mm)',
+        'G44 (.22 LR)',
+        'G45 (9mm)',
+        'G45 MOS (9mm)',
+        'G47 Gen 5 MOS (9mm)',
+        'G48 (9mm)',
+        'G48 MOS (9mm)',
+        'G49 Gen 5 MOS (9mm)',
         'Other',
     ];
 }
