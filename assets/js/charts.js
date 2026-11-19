@@ -318,15 +318,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         byShooter.forEach((s) => {
-            const vals = s.rows.map((r) => Number(r[metric]));
-            const first = vals[0];
-            const latest = vals[vals.length - 1];
-            const best = Math.min(...vals);
-            const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+            // Group entries by match (chronological) and compute per-match average
+            const byMatch = new Map();
+            s.rows.forEach((r) => {
+                const key = `${r.match_date}|${r.match_name}`;
+                if (!byMatch.has(key)) {
+                    byMatch.set(key, []);
+                }
+                byMatch.get(key).push(Number(r[metric]));
+            });
+
+            const matchAvgs = Array.from(byMatch.values()).map(
+                (vals) => vals.reduce((a, b) => a + b, 0) / vals.length
+            );
+
+            const first = matchAvgs[0];
+            const latest = matchAvgs[matchAvgs.length - 1];
+            const best = Math.min(...matchAvgs);
+            const avg = matchAvgs.reduce((a, b) => a + b, 0) / matchAvgs.length;
             const delta = latest - first;
             const deltaClass = delta < 0 ? 'delta-good' : (delta > 0 ? 'delta-bad' : '');
             const deltaPrefix = delta > 0 ? '+' : '';
-            const deltaStr = s.rows.length > 1 ? `${deltaPrefix}${delta.toFixed(2)}s` : '—';
+            const deltaStr = matchAvgs.length > 1 ? `${deltaPrefix}${delta.toFixed(2)}s` : '—';
 
             html += `
                 <tr>
@@ -336,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <strong>${escapeHtml(s.name)}</strong>
                         </span>
                     </td>
-                    <td class="num mono">${s.rows.length}</td>
+                    <td class="num mono">${matchAvgs.length}</td>
                     <td class="num mono">${first.toFixed(2)}s</td>
                     <td class="num mono">${latest.toFixed(2)}s</td>
                     <td class="num mono strong-time">${best.toFixed(2)}s</td>
