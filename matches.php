@@ -119,7 +119,7 @@ render_header('Matches', 'matches', $user, $auth);
                                         class="btn btn-ghost btn-xs js-edit-match"
                                         data-match='<?= e(json_encode($m, JSON_UNESCAPED_UNICODE)) ?>'
                                     >Edit</button>
-                                    <form method="post" action="matches.php" class="inline-form" onsubmit="return confirm('Delete this match?');">
+                                    <form method="post" action="matches.php" class="inline-form" onsubmit="return confirm('Delete this match and all associated match times?');">
                                         <input type="hidden" name="csrf_token" value="<?= e($auth->csrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_match">
                                         <input type="hidden" name="id" value="<?= (int)$m['id'] ?>">

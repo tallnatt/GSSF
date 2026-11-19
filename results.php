@@ -487,7 +487,7 @@ render_header('Match Times', 'results', $user, $auth);
                     </div>
                 </div>
                 <div class="stage-penalties-label">Penalties (count)</div>
-                <div class="stage-penalties-grid stage-penalties-5">
+                <div class="stage-penalties-grid stage-penalties-3">
                     <div class="field">
                         <label for="five-pen-1">1 Second</label>
                         <input type="number" step="1" min="0" id="five-pen-1" name="five_pen_1" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p1'] ?? 0) ?>">
@@ -500,6 +500,8 @@ render_header('Match Times', 'results', $user, $auth);
                         <label for="five-pen-3">3 Seconds</label>
                         <input type="number" step="1" min="0" id="five-pen-3" name="five_pen_3" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p3'] ?? 0) ?>">
                     </div>
+                </div>
+                <div class="stage-penalties-grid stage-penalties-2 stage-penalties-row-2">
                     <div class="field">
                         <label for="five-pen-miss">Miss (+10 Seconds)</label>
                         <input type="number" step="1" min="0" id="five-pen-miss" name="five_pen_miss" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['miss'] ?? 0) ?>">
@@ -571,7 +573,7 @@ render_header('Match Times', 'results', $user, $auth);
                     </div>
                 </div>
                 <div class="stage-penalties-label">Penalties (count)</div>
-                <div class="stage-penalties-grid stage-penalties-5">
+                <div class="stage-penalties-grid stage-penalties-3">
                     <div class="field">
                         <label for="glockm-pen-1">1 Second</label>
                         <input type="number" step="1" min="0" id="glockm-pen-1" name="glockm_pen_1" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p1'] ?? 0) ?>">
@@ -584,6 +586,8 @@ render_header('Match Times', 'results', $user, $auth);
                         <label for="glockm-pen-3">3 Seconds</label>
                         <input type="number" step="1" min="0" id="glockm-pen-3" name="glockm_pen_3" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p3'] ?? 0) ?>">
                     </div>
+                </div>
+                <div class="stage-penalties-grid stage-penalties-2 stage-penalties-row-2">
                     <div class="field">
                         <label for="glockm-pen-miss">Miss (+10 Seconds)</label>
                         <input type="number" step="1" min="0" id="glockm-pen-miss" name="glockm_pen_miss" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['miss'] ?? 0) ?>">

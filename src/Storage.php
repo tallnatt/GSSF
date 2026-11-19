@@ -651,6 +651,14 @@ class Storage
 
     public function deleteMatch(int $id): bool
     {
+        $match = $this->getMatchById($id);
+        if (!$match) {
+            return false;
+        }
+        $this->dbExec(
+            'DELETE FROM match_results WHERE match_name = ? AND match_date = ?',
+            [$match['match_name'], $match['match_date']]
+        );
         return $this->dbExec('DELETE FROM matches WHERE id = ?', [$id]) > 0;
     }
 
