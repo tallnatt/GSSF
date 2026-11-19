@@ -604,11 +604,6 @@ render_header('Match Times', 'results', $user, $auth);
                 <strong id="stage-total-preview" class="mono"><?= $editingResult ? e(format_time((float)$editingResult['total_time'])) . 's' : '0.00s' ?></strong>
             </div>
 
-            <div class="field">
-                <label for="result-notes">Notes (gun, ammo, observations)</label>
-                <textarea id="result-notes" name="notes" rows="2" placeholder="Optional notes..."><?= e($editingResult['notes'] ?? '') ?></textarea>
-            </div>
-
             <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
                 <button type="submit" id="btn-save-result" class="btn btn-primary" <?= empty($savedMatches) ? 'disabled' : '' ?>>Save Match Time</button>

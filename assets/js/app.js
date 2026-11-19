@@ -144,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('glockm-pen-3', '0');
         setVal('glockm-pen-miss', '0');
         setVal('glockm-pen-proc', '0');
-        setVal('result-notes', '');
         updateAllStageTotals();
     }
 
@@ -164,7 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('result-user', data.user_id);
             setVal('result-division', data.division);
             setVal('result-gun', data.gun || '');
-            setVal('result-notes', data.notes);
 
             // Match dropdown selection by match_name & match_date
             const matchSelect = document.getElementById('result-match-id');
