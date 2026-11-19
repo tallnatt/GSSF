@@ -678,6 +678,16 @@ class Storage
         }
     }
 
+    public function getMatchCountsByUser(): array
+    {
+        $rows = $this->dbAll('SELECT user_id, COUNT(DISTINCT match_id) AS cnt FROM match_shooters GROUP BY user_id');
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int)$r['user_id']] = (int)$r['cnt'];
+        }
+        return $out;
+    }
+
     public function getShooterDivisionTotals(array $filters = []): array
     {
         $where = [];

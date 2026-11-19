@@ -63,6 +63,7 @@ if ($action === 'chart_data') {
 
     json_response([
         'results' => $filtered,
+        'match_counts' => $storage->getMatchCountsByUser(),
         'shooters' => array_values(array_map(fn($u) => [
             'id' => (int)$u['id'],
             'display_name' => $u['display_name'],
