@@ -115,8 +115,8 @@ render_header('Overview', 'overview', $user, $auth);
                     <th class="num">Matches</th>
                     <th class="num">Best Total</th>
                     <th class="num">Best 5-to-Glock</th>
-                    <th class="num">Best Plates</th>
                     <th class="num">Best Glock 'M</th>
+                    <th class="num">Best Plates</th>
                     <th class="num">Latest Total</th>
                 </tr>
             </thead>
@@ -136,8 +136,8 @@ render_header('Overview', 'overview', $user, $auth);
                             <td class="num mono"><?= $st['count'] ?></td>
                             <td class="num mono strong-time"><?= $st['best_total'] !== null ? e(format_time($st['best_total'])) . 's' : '—' ?></td>
                             <td class="num mono"><?= $st['best_five'] !== null ? e(format_time($st['best_five'])) . 's' : '—' ?></td>
-                            <td class="num mono"><?= $st['best_plates'] !== null ? e(format_time($st['best_plates'])) . 's' : '—' ?></td>
                             <td class="num mono"><?= $st['best_glockm'] !== null ? e(format_time($st['best_glockm'])) . 's' : '—' ?></td>
+                            <td class="num mono"><?= $st['best_plates'] !== null ? e(format_time($st['best_plates'])) . 's' : '—' ?></td>
                             <td class="num mono"><?= $st['latest_total'] !== null ? e(format_time($st['latest_total'])) . 's' : '—' ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -161,8 +161,8 @@ render_header('Overview', 'overview', $user, $auth);
                     <th>Shooter</th>
                     <th>Division</th>
                     <th class="num">5-to-Glock</th>
-                    <th class="num">Plates</th>
                     <th class="num">Glock 'M</th>
+                    <th class="num">Plates</th>
                     <th class="num">Penalties</th>
                     <th class="num">Total Time</th>
                 </tr>
@@ -188,8 +188,8 @@ render_header('Overview', 'overview', $user, $auth);
                             </td>
                             <td><span class="tag"><?= e($r['division']) ?></span></td>
                             <td class="num mono"><?= e(format_time((float)$r['five_to_glock'])) ?></td>
-                            <td class="num mono"><?= e(format_time((float)$r['glock_the_plates'])) ?></td>
                             <td class="num mono"><?= e(format_time((float)$r['glock_m'])) ?></td>
+                            <td class="num mono"><?= e(format_time((float)$r['glock_the_plates'])) ?></td>
                             <td class="num mono"><?= (float)$r['penalties'] > 0 ? '+' . e(format_time((float)$r['penalties'])) : '0.00' ?></td>
                             <td class="num mono strong-time"><?= e(format_time((float)$r['total_time'])) ?>s</td>
                         </tr>
