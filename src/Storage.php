@@ -32,7 +32,15 @@ class Storage
             $this->driver = 'sqlite';
             $dir = dirname($this->sqlitePath);
             if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
+                if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                    throw new RuntimeException("Cannot create database directory: $dir");
+                }
+            }
+            if (!is_writable($dir)) {
+                throw new RuntimeException("Database directory ($dir) is not writable by the web server. Run: sudo chown -R www-data:www-data $dir");
+            }
+            if (file_exists($this->sqlitePath) && !is_writable($this->sqlitePath)) {
+                throw new RuntimeException("SQLite database file ({$this->sqlitePath}) is not writable by the web server. Run: sudo chown -R www-data:www-data $dir");
             }
 
             if (extension_loaded('pdo_sqlite')) {
@@ -43,8 +51,10 @@ class Storage
                 ]);
                 $this->pdo->exec('PRAGMA foreign_keys = ON;');
                 $this->pdo->exec('PRAGMA journal_mode = WAL;');
-            } else {
+            } elseif (function_exists('exec')) {
                 $this->useSqliteCli = true;
+            } else {
+                throw new RuntimeException('PHP pdo_sqlite extension is not installed. Run: sudo apt install php-sqlite3 && sudo systemctl restart apache2');
             }
 
             $this->initSqliteSchema();

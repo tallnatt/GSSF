@@ -1,2 +1,5 @@
-# Deny all direct HTTP access to stored JSON data files
-Require all denied
+# Deny direct HTTP access to stored database and session files
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule .* - [F,L]
+</IfModule>
