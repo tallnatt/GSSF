@@ -4,13 +4,15 @@ declare(strict_types=1);
 class Storage
 {
     private string $driver;
-    private string $dataDir;
+    private string $sqlitePath;
     private ?PDO $pdo = null;
+    private bool $useSqliteCli = false;
 
     public function __construct(array $config)
     {
-        $this->driver = $config['storage_driver'] ?? 'json';
-        $this->dataDir = $config['data_dir'] ?? (__DIR__ . '/../data');
+        $this->driver = $config['storage_driver'] ?? 'sqlite';
+        $dataDir = $config['data_dir'] ?? (__DIR__ . '/../data');
+        $this->sqlitePath = $config['sqlite_path'] ?? ($dataDir . '/gssf.sqlite');
 
         if ($this->driver === 'mysql') {
             $db = $config['mysql'];
@@ -27,68 +29,185 @@ class Storage
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } else {
-            if (!is_dir($this->dataDir)) {
-                mkdir($this->dataDir, 0755, true);
+            $this->driver = 'sqlite';
+            $dir = dirname($this->sqlitePath);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
             }
+
+            if (extension_loaded('pdo_sqlite')) {
+                $this->pdo = new PDO('sqlite:' . $this->sqlitePath, null, null, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]);
+                $this->pdo->exec('PRAGMA foreign_keys = ON;');
+                $this->pdo->exec('PRAGMA journal_mode = WAL;');
+            } else {
+                $this->useSqliteCli = true;
+            }
+
+            $this->initSqliteSchema();
         }
 
         $this->seedIfEmpty();
     }
 
     // -------------------------------------------------------------------------
-    // JSON flat-file helpers
+    // SQLite execution abstraction (PDO or sqlite3 CLI fallback)
     // -------------------------------------------------------------------------
 
-    private function jsonPath(string $name): string
+    private function quoteSqliteValue(mixed $val): string
     {
-        return $this->dataDir . '/' . $name . '.json';
+        if ($val === null) {
+            return 'NULL';
+        }
+        if (is_int($val) || is_float($val)) {
+            return (string)$val;
+        }
+        if (is_bool($val)) {
+            return $val ? '1' : '0';
+        }
+        return "'" . str_replace("'", "''", (string)$val) . "'";
     }
 
-    private function readJson(string $name): array
+    private function bindSqliteCliSql(string $sql, array $params): string
     {
-        $path = $this->jsonPath($name);
-        if (!file_exists($path)) {
-            return [];
+        if (empty($params)) {
+            return $sql;
         }
-        $fp = fopen($path, 'rb');
-        if (!$fp) {
-            return [];
-        }
-        flock($fp, LOCK_SH);
-        $content = stream_get_contents($fp);
-        flock($fp, LOCK_UN);
-        fclose($fp);
+        $idx = 0;
+        return (string)preg_replace_callback('/\?/', function () use ($params, &$idx) {
+            $val = $params[$idx] ?? null;
+            $idx++;
+            return $this->quoteSqliteValue($val);
+        }, $sql);
+    }
 
-        $decoded = json_decode($content ?: '[]', true);
+    private function runSqliteCli(string $sql, bool $jsonOutput = false): array
+    {
+        $tmpSql = tempnam(sys_get_temp_dir(), 'gssf_sql_');
+        file_put_contents($tmpSql, "PRAGMA foreign_keys = ON;\n" . $sql . "\n");
+        $flag = $jsonOutput ? '-json ' : '';
+        $cmd = sprintf('sqlite3 %s%s < %s 2>&1', $flag, escapeshellarg($this->sqlitePath), escapeshellarg($tmpSql));
+        $output = [];
+        $code = 0;
+        exec($cmd, $output, $code);
+        @unlink($tmpSql);
+
+        if ($code !== 0) {
+            throw new RuntimeException('SQLite CLI error: ' . implode("\n", $output));
+        }
+
+        if (!$jsonOutput) {
+            return [];
+        }
+        $raw = trim(implode("\n", $output));
+        if ($raw === '') {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
         return is_array($decoded) ? $decoded : [];
     }
 
-    private function writeJson(string $name, array $data): void
+    private function dbAll(string $sql, array $params = []): array
     {
-        $path = $this->jsonPath($name);
-        $fp = fopen($path, 'c+b');
-        if (!$fp) {
-            throw new RuntimeException("Unable to write storage file: $path");
+        if (!$this->useSqliteCli) {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
         }
-        flock($fp, LOCK_EX);
-        ftruncate($fp, 0);
-        rewind($fp);
-        fwrite($fp, json_encode(array_values($data), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        fflush($fp);
-        flock($fp, LOCK_UN);
-        fclose($fp);
+        $bound = $this->bindSqliteCliSql($sql, $params);
+        return $this->runSqliteCli($bound, true);
     }
 
-    private function nextId(array $rows): int
+    private function dbOne(string $sql, array $params = []): ?array
     {
-        $max = 0;
-        foreach ($rows as $row) {
-            $id = (int)($row['id'] ?? 0);
-            if ($id > $max) {
-                $max = $id;
-            }
+        $rows = $this->dbAll($sql, $params);
+        return $rows[0] ?? null;
+    }
+
+    private function dbExec(string $sql, array $params = []): int
+    {
+        if (!$this->useSqliteCli) {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->rowCount();
         }
-        return $max + 1;
+        $bound = $this->bindSqliteCliSql($sql . '; SELECT changes() AS c', $params);
+        $rows = $this->runSqliteCli($bound, true);
+        return (int)($rows[0]['c'] ?? 0);
+    }
+
+    private function dbInsert(string $sql, array $params = []): int
+    {
+        if (!$this->useSqliteCli) {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return (int)$this->pdo->lastInsertId();
+        }
+        $bound = $this->bindSqliteCliSql($sql . '; SELECT last_insert_rowid() AS id', $params);
+        $rows = $this->runSqliteCli($bound, true);
+        return (int)($rows[0]['id'] ?? 0);
+    }
+
+    private function initSqliteSchema(): void
+    {
+        $schema = "
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            display_name TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'member',
+            default_division TEXT NOT NULL DEFAULT 'Amateur Civilian',
+            color TEXT NOT NULL DEFAULT '#1d4ed8',
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS match_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            match_name TEXT NOT NULL,
+            match_date TEXT NOT NULL,
+            location TEXT NOT NULL DEFAULT '',
+            division TEXT NOT NULL DEFAULT 'Amateur Civilian',
+            five_to_glock REAL NOT NULL,
+            glock_the_plates REAL NOT NULL,
+            glock_m REAL NOT NULL,
+            penalties REAL NOT NULL DEFAULT 0.0,
+            total_time REAL NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
+            created_by INTEGER NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_results_user_date ON match_results(user_id, match_date);
+
+        CREATE TABLE IF NOT EXISTS passkeys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            credential_id TEXT NOT NULL UNIQUE,
+            public_key_pem TEXT NOT NULL,
+            cose_alg INTEGER NOT NULL DEFAULT -7,
+            sign_count INTEGER NOT NULL DEFAULT 0,
+            label TEXT NOT NULL DEFAULT 'Passkey',
+            created_at TEXT NOT NULL,
+            last_used_at TEXT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id);
+        ";
+
+        if (!$this->useSqliteCli) {
+            $this->pdo->exec($schema);
+        } else {
+            $this->runSqliteCli($schema, false);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -97,169 +216,79 @@ class Storage
 
     public function getUsers(bool $onlyActive = false): array
     {
-        if ($this->driver === 'mysql') {
-            $sql = 'SELECT * FROM users';
-            if ($onlyActive) {
-                $sql .= ' WHERE active = 1';
-            }
-            $sql .= ' ORDER BY display_name ASC';
-            return $this->pdo->query($sql)->fetchAll();
-        }
-
-        $users = $this->readJson('users');
+        $sql = 'SELECT * FROM users';
         if ($onlyActive) {
-            $users = array_values(array_filter($users, fn($u) => !empty($u['active'])));
+            $sql .= ' WHERE active = 1';
         }
-        usort($users, fn($a, $b) => strcasecmp($a['display_name'], $b['display_name']));
-        return $users;
+        $sql .= ' ORDER BY display_name COLLATE NOCASE ASC';
+        if ($this->driver === 'mysql') {
+            $sql = str_replace(' COLLATE NOCASE', '', $sql);
+        }
+        return $this->dbAll($sql);
     }
 
     public function getUserById(int $id): ?array
     {
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
-            $stmt->execute([$id]);
-            $row = $stmt->fetch();
-            return $row ?: null;
-        }
-
-        foreach ($this->readJson('users') as $user) {
-            if ((int)$user['id'] === $id) {
-                return $user;
-            }
-        }
-        return null;
+        return $this->dbOne('SELECT * FROM users WHERE id = ? LIMIT 1', [$id]);
     }
 
     public function getUserByUsername(string $username): ?array
     {
-        $username = strtolower(trim($username));
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare('SELECT * FROM users WHERE LOWER(username) = ? LIMIT 1');
-            $stmt->execute([$username]);
-            $row = $stmt->fetch();
-            return $row ?: null;
-        }
-
-        foreach ($this->readJson('users') as $user) {
-            if (strtolower($user['username']) === $username) {
-                return $user;
-            }
-        }
-        return null;
+        return $this->dbOne('SELECT * FROM users WHERE LOWER(username) = ? LIMIT 1', [strtolower(trim($username))]);
     }
 
     public function createUser(array $data): int
     {
         $now = date('Y-m-d H:i:s');
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare(
-                'INSERT INTO users (username, display_name, password_hash, role, default_division, color, active, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-            );
-            $stmt->execute([
+        return $this->dbInsert(
+            'INSERT INTO users (username, display_name, password_hash, role, default_division, color, active, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
                 strtolower(trim($data['username'])),
                 trim($data['display_name']),
                 password_hash($data['password'], PASSWORD_DEFAULT),
-                $data['role'] === 'admin' ? 'admin' : 'member',
+                ($data['role'] ?? 'member') === 'admin' ? 'admin' : 'member',
                 $data['default_division'] ?? 'Amateur Civilian',
                 $data['color'] ?? '#1d4ed8',
                 isset($data['active']) ? (int)$data['active'] : 1,
                 $now,
-            ]);
-            return (int)$this->pdo->lastInsertId();
-        }
-
-        $users = $this->readJson('users');
-        $id = $this->nextId($users);
-        $users[] = [
-            'id' => $id,
-            'username' => strtolower(trim($data['username'])),
-            'display_name' => trim($data['display_name']),
-            'password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
-            'role' => ($data['role'] ?? 'member') === 'admin' ? 'admin' : 'member',
-            'default_division' => $data['default_division'] ?? 'Amateur Civilian',
-            'color' => $data['color'] ?? '#1d4ed8',
-            'active' => isset($data['active']) ? (int)$data['active'] : 1,
-            'created_at' => $now,
-        ];
-        $this->writeJson('users', $users);
-        return $id;
+            ]
+        );
     }
 
     public function updateUser(int $id, array $data): bool
     {
-        if ($this->driver === 'mysql') {
-            $fields = [
-                'username = ?',
-                'display_name = ?',
-                'role = ?',
-                'default_division = ?',
-                'color = ?',
-                'active = ?',
-            ];
-            $params = [
-                strtolower(trim($data['username'])),
-                trim($data['display_name']),
-                $data['role'] === 'admin' ? 'admin' : 'member',
-                $data['default_division'] ?? 'Amateur Civilian',
-                $data['color'] ?? '#1d4ed8',
-                isset($data['active']) ? (int)$data['active'] : 1,
-            ];
+        $fields = [
+            'username = ?',
+            'display_name = ?',
+            'role = ?',
+            'default_division = ?',
+            'color = ?',
+            'active = ?',
+        ];
+        $params = [
+            strtolower(trim($data['username'])),
+            trim($data['display_name']),
+            ($data['role'] ?? 'member') === 'admin' ? 'admin' : 'member',
+            $data['default_division'] ?? 'Amateur Civilian',
+            $data['color'] ?? '#1d4ed8',
+            isset($data['active']) ? (int)$data['active'] : 1,
+        ];
 
-            if (!empty($data['password'])) {
-                $fields[] = 'password_hash = ?';
-                $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
-            }
-            $params[] = $id;
+        if (!empty($data['password'])) {
+            $fields[] = 'password_hash = ?';
+            $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+        $params[] = $id;
 
-            $sql = 'UPDATE users SET ' . implode(', ', $fields) . ' WHERE id = ?';
-            return $this->pdo->prepare($sql)->execute($params);
-        }
-
-        $users = $this->readJson('users');
-        $updated = false;
-        foreach ($users as &$user) {
-            if ((int)$user['id'] === $id) {
-                $user['username'] = strtolower(trim($data['username']));
-                $user['display_name'] = trim($data['display_name']);
-                $user['role'] = ($data['role'] ?? 'member') === 'admin' ? 'admin' : 'member';
-                $user['default_division'] = $data['default_division'] ?? 'Amateur Civilian';
-                $user['color'] = $data['color'] ?? '#1d4ed8';
-                $user['active'] = isset($data['active']) ? (int)$data['active'] : 1;
-                if (!empty($data['password'])) {
-                    $user['password_hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
-                }
-                $updated = true;
-                break;
-            }
-        }
-        if ($updated) {
-            $this->writeJson('users', $users);
-        }
-        return $updated;
+        $sql = 'UPDATE users SET ' . implode(', ', $fields) . ' WHERE id = ?';
+        $this->dbExec($sql, $params);
+        return true;
     }
 
     public function deleteUser(int $id): bool
     {
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare('DELETE FROM users WHERE id = ?');
-            return $stmt->execute([$id]);
-        }
-
-        $users = $this->readJson('users');
-        $filtered = array_values(array_filter($users, fn($u) => (int)$u['id'] !== $id));
-        if (count($filtered) === count($users)) {
-            return false;
-        }
-        $this->writeJson('users', $filtered);
-
-        // Cascade delete results for that user
-        $results = $this->readJson('results');
-        $filteredResults = array_values(array_filter($results, fn($r) => (int)$r['user_id'] !== $id));
-        $this->writeJson('results', $filteredResults);
-
-        return true;
+        return $this->dbExec('DELETE FROM users WHERE id = ?', [$id]) > 0;
     }
 
     // -------------------------------------------------------------------------
@@ -268,121 +297,53 @@ class Storage
 
     public function getResults(array $filters = []): array
     {
-        if ($this->driver === 'mysql') {
-            $where = [];
-            $params = [];
+        $where = [];
+        $params = [];
 
-            if (!empty($filters['user_id'])) {
-                $where[] = 'r.user_id = ?';
-                $params[] = (int)$filters['user_id'];
-            }
-            if (!empty($filters['division'])) {
-                $where[] = 'r.division = ?';
-                $params[] = $filters['division'];
-            }
-            if (!empty($filters['date_from'])) {
-                $where[] = 'r.match_date >= ?';
-                $params[] = $filters['date_from'];
-            }
-            if (!empty($filters['date_to'])) {
-                $where[] = 'r.match_date <= ?';
-                $params[] = $filters['date_to'];
-            }
-            if (!empty($filters['search'])) {
-                $where[] = '(r.match_name LIKE ? OR r.location LIKE ? OR r.notes LIKE ?)';
-                $q = '%' . $filters['search'] . '%';
-                $params[] = $q;
-                $params[] = $q;
-                $params[] = $q;
-            }
-
-            $sql = 'SELECT r.*, u.display_name AS shooter_name, u.color AS shooter_color
-                    FROM match_results r
-                    JOIN users u ON u.id = r.user_id';
-            if ($where) {
-                $sql .= ' WHERE ' . implode(' AND ', $where);
-            }
-            $sql .= ' ORDER BY r.match_date DESC, r.total_time ASC';
-
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
-            return $stmt->fetchAll();
+        if (!empty($filters['user_id'])) {
+            $where[] = 'r.user_id = ?';
+            $params[] = (int)$filters['user_id'];
+        }
+        if (!empty($filters['division'])) {
+            $where[] = 'r.division = ?';
+            $params[] = $filters['division'];
+        }
+        if (!empty($filters['date_from'])) {
+            $where[] = 'r.match_date >= ?';
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $where[] = 'r.match_date <= ?';
+            $params[] = $filters['date_to'];
+        }
+        if (!empty($filters['search'])) {
+            $where[] = '(r.match_name LIKE ? OR r.location LIKE ? OR r.notes LIKE ?)';
+            $q = '%' . $filters['search'] . '%';
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
         }
 
-        $usersById = [];
-        foreach ($this->readJson('users') as $u) {
-            $usersById[(int)$u['id']] = $u;
+        $sql = 'SELECT r.*, u.display_name AS shooter_name, u.color AS shooter_color
+                FROM match_results r
+                JOIN users u ON u.id = r.user_id';
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
+        $sql .= ' ORDER BY r.match_date DESC, r.total_time ASC';
 
-        $results = $this->readJson('results');
-        $out = [];
-        foreach ($results as $r) {
-            $uid = (int)$r['user_id'];
-            if (!isset($usersById[$uid])) {
-                continue;
-            }
-            if (!empty($filters['user_id']) && $uid !== (int)$filters['user_id']) {
-                continue;
-            }
-            if (!empty($filters['division']) && $r['division'] !== $filters['division']) {
-                continue;
-            }
-            if (!empty($filters['date_from']) && $r['match_date'] < $filters['date_from']) {
-                continue;
-            }
-            if (!empty($filters['date_to']) && $r['match_date'] > $filters['date_to']) {
-                continue;
-            }
-            if (!empty($filters['search'])) {
-                $haystack = strtolower(($r['match_name'] ?? '') . ' ' . ($r['location'] ?? '') . ' ' . ($r['notes'] ?? ''));
-                if (!str_contains($haystack, strtolower($filters['search']))) {
-                    continue;
-                }
-            }
-
-            $r['shooter_name'] = $usersById[$uid]['display_name'];
-            $r['shooter_color'] = $usersById[$uid]['color'] ?? '#1d4ed8';
-            $out[] = $r;
-        }
-
-        usort($out, function ($a, $b) {
-            $dateCmp = strcmp($b['match_date'], $a['match_date']);
-            if ($dateCmp !== 0) {
-                return $dateCmp;
-            }
-            return ((float)$a['total_time']) <=> ((float)$b['total_time']);
-        });
-
-        return $out;
+        return $this->dbAll($sql, $params);
     }
 
     public function getResultById(int $id): ?array
     {
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare(
-                'SELECT r.*, u.display_name AS shooter_name, u.color AS shooter_color
-                 FROM match_results r
-                 JOIN users u ON u.id = r.user_id
-                 WHERE r.id = ? LIMIT 1'
-            );
-            $stmt->execute([$id]);
-            $row = $stmt->fetch();
-            return $row ?: null;
-        }
-
-        $usersById = [];
-        foreach ($this->readJson('users') as $u) {
-            $usersById[(int)$u['id']] = $u;
-        }
-        foreach ($this->readJson('results') as $r) {
-            if ((int)$r['id'] === $id) {
-                $uid = (int)$r['user_id'];
-                $r['shooter_name'] = $usersById[$uid]['display_name'] ?? 'Unknown';
-                $r['shooter_color'] = $usersById[$uid]['color'] ?? '#1d4ed8';
-                return $r;
-            }
-        }
-        return null;
+        return $this->dbOne(
+            'SELECT r.*, u.display_name AS shooter_name, u.color AS shooter_color
+             FROM match_results r
+             JOIN users u ON u.id = r.user_id
+             WHERE r.id = ? LIMIT 1',
+            [$id]
+        );
     }
 
     public function createResult(array $data): int
@@ -394,13 +355,11 @@ class Storage
         $total = round($five + $plates + $glockm + $penalties, 2);
         $now = date('Y-m-d H:i:s');
 
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare(
-                'INSERT INTO match_results
-                 (user_id, match_name, match_date, location, division, five_to_glock, glock_the_plates, glock_m, penalties, total_time, notes, created_by, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-            );
-            $stmt->execute([
+        return $this->dbInsert(
+            'INSERT INTO match_results
+             (user_id, match_name, match_date, location, division, five_to_glock, glock_the_plates, glock_m, penalties, total_time, notes, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
                 (int)$data['user_id'],
                 trim($data['match_name']),
                 $data['match_date'],
@@ -415,31 +374,8 @@ class Storage
                 isset($data['created_by']) ? (int)$data['created_by'] : null,
                 $now,
                 $now,
-            ]);
-            return (int)$this->pdo->lastInsertId();
-        }
-
-        $results = $this->readJson('results');
-        $id = $this->nextId($results);
-        $results[] = [
-            'id' => $id,
-            'user_id' => (int)$data['user_id'],
-            'match_name' => trim($data['match_name']),
-            'match_date' => $data['match_date'],
-            'location' => trim($data['location'] ?? ''),
-            'division' => trim($data['division'] ?? 'Amateur Civilian'),
-            'five_to_glock' => $five,
-            'glock_the_plates' => $plates,
-            'glock_m' => $glockm,
-            'penalties' => $penalties,
-            'total_time' => $total,
-            'notes' => trim($data['notes'] ?? ''),
-            'created_by' => isset($data['created_by']) ? (int)$data['created_by'] : null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ];
-        $this->writeJson('results', $results);
-        return $id;
+            ]
+        );
     }
 
     public function updateResult(int $id, array $data): bool
@@ -451,15 +387,13 @@ class Storage
         $total = round($five + $plates + $glockm + $penalties, 2);
         $now = date('Y-m-d H:i:s');
 
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare(
-                'UPDATE match_results SET
-                 user_id = ?, match_name = ?, match_date = ?, location = ?, division = ?,
-                 five_to_glock = ?, glock_the_plates = ?, glock_m = ?, penalties = ?, total_time = ?,
-                 notes = ?, updated_at = ?
-                 WHERE id = ?'
-            );
-            return $stmt->execute([
+        $this->dbExec(
+            'UPDATE match_results SET
+             user_id = ?, match_name = ?, match_date = ?, location = ?, division = ?,
+             five_to_glock = ?, glock_the_plates = ?, glock_m = ?, penalties = ?, total_time = ?,
+             notes = ?, updated_at = ?
+             WHERE id = ?',
+            [
                 (int)$data['user_id'],
                 trim($data['match_name']),
                 $data['match_date'],
@@ -473,49 +407,69 @@ class Storage
                 trim($data['notes'] ?? ''),
                 $now,
                 $id,
-            ]);
-        }
-
-        $results = $this->readJson('results');
-        $updated = false;
-        foreach ($results as &$r) {
-            if ((int)$r['id'] === $id) {
-                $r['user_id'] = (int)$data['user_id'];
-                $r['match_name'] = trim($data['match_name']);
-                $r['match_date'] = $data['match_date'];
-                $r['location'] = trim($data['location'] ?? '');
-                $r['division'] = trim($data['division'] ?? 'Amateur Civilian');
-                $r['five_to_glock'] = $five;
-                $r['glock_the_plates'] = $plates;
-                $r['glock_m'] = $glockm;
-                $r['penalties'] = $penalties;
-                $r['total_time'] = $total;
-                $r['notes'] = trim($data['notes'] ?? '');
-                $r['updated_at'] = $now;
-                $updated = true;
-                break;
-            }
-        }
-        if ($updated) {
-            $this->writeJson('results', $results);
-        }
-        return $updated;
+            ]
+        );
+        return true;
     }
 
     public function deleteResult(int $id): bool
     {
-        if ($this->driver === 'mysql') {
-            $stmt = $this->pdo->prepare('DELETE FROM match_results WHERE id = ?');
-            return $stmt->execute([$id]);
-        }
+        return $this->dbExec('DELETE FROM match_results WHERE id = ?', [$id]) > 0;
+    }
 
-        $results = $this->readJson('results');
-        $filtered = array_values(array_filter($results, fn($r) => (int)$r['id'] !== $id));
-        if (count($filtered) === count($results)) {
-            return false;
-        }
-        $this->writeJson('results', $filtered);
-        return true;
+    // -------------------------------------------------------------------------
+    // Passkeys (WebAuthn)
+    // -------------------------------------------------------------------------
+
+    public function getPasskeysForUser(int $userId): array
+    {
+        return $this->dbAll(
+            'SELECT id, user_id, credential_id, cose_alg, sign_count, label, created_at, last_used_at
+             FROM passkeys WHERE user_id = ? ORDER BY created_at DESC',
+            [$userId]
+        );
+    }
+
+    public function getPasskeyByCredentialId(string $credentialId): ?array
+    {
+        return $this->dbOne(
+            'SELECT p.*, u.username, u.display_name, u.active
+             FROM passkeys p
+             JOIN users u ON u.id = p.user_id
+             WHERE p.credential_id = ? LIMIT 1',
+            [$credentialId]
+        );
+    }
+
+    public function createPasskey(int $userId, string $credentialId, string $publicKeyPem, int $coseAlg, int $signCount, string $label): int
+    {
+        $now = date('Y-m-d H:i:s');
+        return $this->dbInsert(
+            'INSERT INTO passkeys (user_id, credential_id, public_key_pem, cose_alg, sign_count, label, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+                $userId,
+                $credentialId,
+                $publicKeyPem,
+                $coseAlg,
+                $signCount,
+                trim($label) !== '' ? trim($label) : 'Passkey',
+                $now,
+            ]
+        );
+    }
+
+    public function updatePasskeyUsage(int $id, int $signCount): void
+    {
+        $this->dbExec(
+            'UPDATE passkeys SET sign_count = ?, last_used_at = ? WHERE id = ?',
+            [$signCount, date('Y-m-d H:i:s'), $id]
+        );
+    }
+
+    public function deletePasskey(int $id, int $userId): bool
+    {
+        return $this->dbExec('DELETE FROM passkeys WHERE id = ? AND user_id = ?', [$id, $userId]) > 0;
     }
 
     // -------------------------------------------------------------------------
@@ -524,8 +478,8 @@ class Storage
 
     private function seedIfEmpty(): void
     {
-        $existingUsers = $this->getUsers();
-        if (!empty($existingUsers)) {
+        $existing = $this->dbOne('SELECT COUNT(*) AS cnt FROM users');
+        if ((int)($existing['cnt'] ?? 0) > 0) {
             return;
         }
 
@@ -560,19 +514,15 @@ class Storage
         ]);
 
         $sampleMatches = [
-            // Match 1
             [$adminId, 'Spring Classic Regional', '2026-03-14', 'Oakdale Range', 'Amateur Civilian', 26.40, 21.85, 25.10, 0.00, 'G19 Gen5 - clean plates'],
             [$alexId, 'Spring Classic Regional', '2026-03-14', 'Oakdale Range', 'Competition', 23.90, 19.40, 22.80, 0.00, 'G34 MOS - fast transitions'],
             [$jordanId, 'Spring Classic Regional', '2026-03-14', 'Oakdale Range', 'Amateur Civilian', 31.20, 26.50, 29.90, 2.00, '1 charlie-mike'],
-            // Match 2
             [$adminId, 'Midwest Glock Challenge', '2026-05-09', 'Tri-County Club', 'Amateur Civilian', 25.15, 20.10, 24.30, 0.00, 'Personal best on Plates'],
             [$alexId, 'Midwest Glock Challenge', '2026-05-09', 'Tri-County Club', 'Competition', 22.80, 18.95, 21.90, 0.00, 'Consistent strings'],
             [$jordanId, 'Midwest Glock Challenge', '2026-05-09', 'Tri-County Club', 'Amateur Civilian', 28.90, 24.10, 27.60, 0.00, 'Zero penalties!'],
-            // Match 3
             [$adminId, 'Summer Heat Outdoor', '2026-07-18', 'Riverbend Practical', 'Amateur Civilian', 24.50, 19.60, 23.40, 0.00, 'Steady progress'],
             [$alexId, 'Summer Heat Outdoor', '2026-07-18', 'Riverbend Practical', 'Competition', 21.95, 17.80, 20.75, 0.00, 'Sub-61s total'],
             [$jordanId, 'Summer Heat Outdoor', '2026-07-18', 'Riverbend Practical', 'Amateur Civilian', 26.75, 22.30, 25.40, 0.00, 'Big jump on Five to Glock'],
-            // Match 4
             [$adminId, 'Autumn Ballistic Classic', '2026-09-26', 'Oakdale Range', 'Amateur Civilian', 23.80, 18.90, 22.65, 0.00, 'Season best'],
             [$alexId, 'Autumn Ballistic Classic', '2026-09-26', 'Oakdale Range', 'Competition', 21.10, 17.25, 19.95, 0.00, 'Sub-59s match'],
             [$jordanId, 'Autumn Ballistic Classic', '2026-09-26', 'Oakdale Range', 'Amateur Civilian', 25.40, 21.15, 24.10, 0.00, 'Closed the gap!'],

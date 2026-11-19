@@ -1,5 +1,6 @@
--- GSSF Family Match Tracker - MySQL / MariaDB Schema
--- Run: mysql -u root -p < schema.sql
+-- GSSF Family Match Tracker - MySQL / MariaDB Schema (optional)
+-- By default, the app uses SQLite at /var/www/gssf/data/gssf.sqlite.
+-- To use MySQL instead: mysql -u root -p < schema.sql
 
 CREATE DATABASE IF NOT EXISTS `gssf_tracker`
   CHARACTER SET utf8mb4
@@ -40,4 +41,20 @@ CREATE TABLE IF NOT EXISTS `match_results` (
   PRIMARY KEY (`id`),
   KEY `idx_user_date` (`user_id`, `match_date`),
   CONSTRAINT `fk_results_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `passkeys` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `credential_id` VARCHAR(512) NOT NULL,
+  `public_key_pem` TEXT NOT NULL,
+  `cose_alg` INT NOT NULL DEFAULT -7,
+  `sign_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `label` VARCHAR(100) NOT NULL DEFAULT 'Passkey',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_used_at` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_credential_id` (`credential_id`),
+  KEY `idx_passkey_user` (`user_id`),
+  CONSTRAINT `fk_passkeys_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

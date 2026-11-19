@@ -1,4 +1,4 @@
-# Apache configuration for GSSF Family Match Tracker
+# Apache configuration for GSSF Family Match Tracker (/var/www/gssf)
 Options -Indexes
 
 <IfModule mod_rewrite.c>
@@ -8,7 +8,7 @@ Options -Indexes
     RewriteRule ^(config\.php|config\.local\.php|schema\.sql|README\.md|apache-vhost\.conf)$ - [F,L]
 </IfModule>
 
-<FilesMatch "^(config\.php|config\.local\.php|schema\.sql|apache-vhost\.conf)$">
+<FilesMatch "^(config\.php|config\.local\.php|schema\.sql|apache-vhost\.conf)$|\.(sqlite|sqlite3|db)$">
     Require all denied
 </FilesMatch>
 

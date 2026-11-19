@@ -60,6 +60,18 @@ class Auth
         return true;
     }
 
+    public function loginByUserId(int $userId): bool
+    {
+        $user = $this->storage->getUserById($userId);
+        if (!$user || empty($user['active'])) {
+            return false;
+        }
+        session_regenerate_id(true);
+        $_SESSION['user_id'] = (int)$user['id'];
+        $this->cachedUser = $user;
+        return true;
+    }
+
     public function logout(): void
     {
         $_SESSION = [];

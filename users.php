@@ -255,5 +255,52 @@ render_header('Family Shooters', 'users', $user, $auth);
         </form>
     </div>
 </div>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>My Passkeys (<?= e($user['display_name']) ?>)</h2>
+        <span class="muted-note">Passwordless sign-in via Touch ID, Face ID, or security key (requires HTTPS or localhost)</span>
+    </div>
+    <div class="filter-panel">
+        <div id="passkey-reg-status" style="display:none;" role="alert"></div>
+        <div class="filter-bar">
+            <div class="field field-grow">
+                <label for="passkey-label">Device / Key Label</label>
+                <input type="text" id="passkey-label" placeholder="e.g. MacBook Touch ID, iPhone, YubiKey">
+            </div>
+            <div class="filter-actions">
+                <button type="button" id="btn-register-passkey" class="btn btn-primary">+ Register Passkey</button>
+            </div>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Label</th>
+                    <th>Created</th>
+                    <th>Last Used</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($myPasskeys)): ?>
+                    <tr><td colspan="4" class="empty-cell">No passkeys registered for your account yet.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($myPasskeys as $pk): ?>
+                        <tr>
+                            <td><strong><?= e($pk['label']) ?></strong></td>
+                            <td class="mono"><?= e($pk['created_at']) ?></td>
+                            <td class="mono"><?= !empty($pk['last_used_at']) ? e($pk['last_used_at']) : 'Never' ?></td>
+                            <td class="actions-col">
+                                <button type="button" class="btn btn-danger-ghost btn-xs js-delete-passkey" data-id="<?= (int)$pk['id'] ?>">Remove</button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</section>
 <?php
-render_footer();
+render_footer(['assets/js/passkeys.js']);

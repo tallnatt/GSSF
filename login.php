@@ -69,15 +69,21 @@ $csrf = e($auth->csrfToken());
             <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block">Sign In</button>
         </form>
 
+        <div class="auth-divider"><span>or</span></div>
+
+        <div id="passkey-status" style="display:none;" role="alert"></div>
+        <button type="button" id="btn-passkey-login" class="btn btn-secondary btn-block">Sign in with Passkey</button>
+
         <div class="auth-hint">
             <p><strong>Default accounts:</strong></p>
             <ul>
                 <li>Admin: <code>admin</code> / <code>gssf2026</code></li>
                 <li>Shooter: <code>alex</code> / <code>family2026</code></li>
             </ul>
-            <p class="muted-note">Change default passwords in <em>Family Shooters</em> after signing in.</p>
+            <p class="muted-note">Change default passwords or register a Passkey in <em>Family Shooters</em> after signing in.</p>
         </div>
     </section>
 </main>
+<script src="assets/js/passkeys.js"></script>
 </body>
 </html>

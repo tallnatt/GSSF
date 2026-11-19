@@ -1,29 +1,34 @@
 # GSSF Family Match Tracker
 
-A PHP 8+ web application designed for **Apache** to track, edit, and compare **Glock Sport Shooting Foundation (GSSF)** match results for your family.
+A PHP 8+ web application designed for **Apache** (`/var/www/gssf`) using **SQLite** to track, edit, and compare **Glock Sport Shooting Foundation (GSSF)** match results for your family.
 
 ## Features
-- **User Logins & Roles**: Session-based authentication with `password_hash()` / `password_verify()`, CSRF protection, and `admin` / `member` roles.
+- **User Logins & Passkeys (WebAuthn)**: Session-based authentication with `password_hash()` / `password_verify()`, CSRF protection, `admin` / `member` roles, and **Passkey (WebAuthn)** registration & passwordless sign-in (Touch ID, Face ID, Windows Hello, hardware security keys).
+- **SQLite Storage**: Zero-configuration SQLite database at `/var/www/gssf/data/gssf.sqlite` (using `pdo_sqlite`).
 - **Event Times (Add & Edit)**: Log and edit GSSF stage times (**Five to Glock**, **Glock the Plates**, **Glock 'M**, and **Penalties**) with live Total Time calculation, division tagging, location, and notes.
-- **Family Shooters (Add & Edit Users)**: Manage family member accounts, usernames, passwords, default GSSF divisions, active status, and graph colors.
+- **Family Shooters (Add & Edit Users)**: Manage family member accounts, usernames, passwords, default GSSF divisions, active status, graph colors, and passkeys.
 - **Progress Graphs**: Interactive SVG charts comparing selected family members over time (Total Time or individual stages) plus side-by-side stage-by-stage Average and Personal Best bar comparisons.
 
-## Apache Deployment
+## Apache Deployment (`/var/www/gssf`)
 
-1. Copy this repository into your Apache web root (for example `/var/www/html/gssf`).
-2. Ensure PHP 8.0+ (`libapache2-mod-php` or `php-fpm`) is enabled and `mod_rewrite` + `mod_headers` are active:
+1. Place this repository at `/var/www/gssf`.
+2. Ensure PHP 8.0+ with `pdo_sqlite` and `openssl` is installed, and enable Apache `mod_rewrite` and `mod_headers`:
    ```bash
+   sudo apt install php-sqlite3
    sudo a2enmod rewrite headers
    sudo systemctl restart apache2
    ```
-3. Ensure Apache has write permission to `data/` if using the default zero-config JSON storage:
+3. Ensure Apache has write permission to `/var/www/gssf/data` for the SQLite database:
    ```bash
-   sudo chown -R www-data:www-data /var/www/html/gssf/data
+   sudo chown -R www-data:www-data /var/www/gssf/data
    ```
-4. Optionally configure a VirtualHost using `apache-vhost.conf` (`AllowOverride All` enables the included `.htaccess` security rules that block direct HTTP access to `data/`, `src/`, `config.php`, and `schema.sql`).
+4. Configure your Apache VirtualHost using `apache-vhost.conf` (sets `DocumentRoot /var/www/gssf` and `AllowOverride All`, which enables `.htaccess` rules blocking direct HTTP access to `data/`, `src/`, `*.sqlite`, `config.php`, and `schema.sql`).
 
-### Optional: Using MySQL / MariaDB instead of JSON storage
-By default, `config.php` uses `'storage_driver' => 'json'` so the app works immediately without database setup. To switch to MySQL/MariaDB:
+### Passkey (WebAuthn) Requirement
+Browsers require **HTTPS** (or `http://localhost` for local testing) for WebAuthn passkey registration and sign-in.
+
+### Optional: Using MySQL / MariaDB instead of SQLite
+To switch from SQLite to MySQL/MariaDB:
 1. Import `schema.sql`:
    ```bash
    mysql -u root -p < schema.sql
@@ -44,9 +49,9 @@ By default, `config.php` uses `'storage_driver' => 'json'` so the app works imme
    ```
 
 ## Default Starter Accounts
-On first run, the app seeds 3 starter accounts and sample matches so you can test graphing immediately:
+On first run, the app seeds 3 starter accounts and sample matches in SQLite:
 - **Admin**: `admin` / `gssf2026`
 - **Shooter**: `alex` / `family2026`
 - **Shooter**: `jordan` / `family2026`
 
-Change these passwords in **Family Shooters** after signing in.
+Change these passwords and register your Passkeys in **Family Shooters** after signing in.

@@ -1,4 +1,7 @@
 # Local data & environment overrides
+/data/*.sqlite
+/data/*.sqlite-*
+/data/*.db
 /data/*.json
 /data/sessions/
 /config.local.php
