@@ -282,14 +282,13 @@ render_header('Match Times', 'results', $user, $auth);
                     <th>Shooter</th>
                     <th>Division</th>
                     <th class="num">Matches</th>
-                    <th class="num">Combined Total Time</th>
                     <th class="num">Best Match Total</th>
                     <th class="num">Average Match Total</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($divisionTotals)): ?>
-                    <tr><td colspan="6" class="empty-cell">No match times match the current filters.</td></tr>
+                    <tr><td colspan="5" class="empty-cell">No match times match the current filters.</td></tr>
                 <?php else: ?>
                     <?php foreach ($divisionTotals as $dt): ?>
                         <tr>
@@ -301,8 +300,7 @@ render_header('Match Times', 'results', $user, $auth);
                             </td>
                             <td><span class="tag"><?= e($dt['division']) ?></span></td>
                             <td class="num mono"><?= (int)$dt['match_count'] ?></td>
-                            <td class="num mono strong-time"><?= e(format_time((float)$dt['sum_total_time'])) ?>s</td>
-                            <td class="num mono"><?= e(format_time((float)$dt['best_total_time'])) ?>s</td>
+                            <td class="num mono strong-time"><?= e(format_time((float)$dt['best_total_time'])) ?>s</td>
                             <td class="num mono"><?= e(format_time((float)$dt['avg_total_time'])) ?>s</td>
                         </tr>
                     <?php endforeach; ?>
