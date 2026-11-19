@@ -133,7 +133,7 @@ render_header('Overview', 'overview', $user, $auth);
                                 </span>
                             </td>
                             <td><span class="tag"><?= e($st['user']['default_division'] ?? 'Amateur Civilian') ?></span></td>
-                            <td class="num mono"><?= $st['count'] ?></td>
+                            <td class="num mono"><?= count($st['distinct_matches']) ?></td>
                             <td class="num mono strong-time"><?= $st['best_total'] !== null ? e(format_time($st['best_total'])) . 's' : '—' ?></td>
                             <td class="num mono"><?= $st['best_five'] !== null ? e(format_time($st['best_five'])) . 's' : '—' ?></td>
                             <td class="num mono"><?= $st['best_glockm'] !== null ? e(format_time($st['best_glockm'])) . 's' : '—' ?></td>
