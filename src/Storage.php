@@ -188,6 +188,7 @@ class Storage
             glock_m REAL NOT NULL,
             penalties REAL NOT NULL DEFAULT 0.0,
             total_time REAL NOT NULL,
+            stage_details TEXT NOT NULL DEFAULT '',
             notes TEXT NOT NULL DEFAULT '',
             created_by INTEGER NULL,
             created_at TEXT NOT NULL,
@@ -380,13 +381,16 @@ class Storage
         $plates = round((float)$data['glock_the_plates'], 2);
         $glockm = round((float)$data['glock_m'], 2);
         $penalties = round((float)($data['penalties'] ?? 0), 2);
-        $total = round($five + $plates + $glockm + $penalties, 2);
+        $total = isset($data['total_time'])
+            ? round((float)$data['total_time'], 2)
+            : round($five + $plates + $glockm + $penalties, 2);
+        $stageDetails = (string)($data['stage_details'] ?? '');
         $now = date('Y-m-d H:i:s');
 
         return $this->dbInsert(
             'INSERT INTO match_results
-             (user_id, match_name, match_date, location, division, five_to_glock, glock_the_plates, glock_m, penalties, total_time, notes, created_by, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             (user_id, match_name, match_date, location, division, five_to_glock, glock_the_plates, glock_m, penalties, total_time, stage_details, notes, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 (int)$data['user_id'],
                 trim($data['match_name']),
@@ -398,6 +402,7 @@ class Storage
                 $glockm,
                 $penalties,
                 $total,
+                $stageDetails,
                 trim($data['notes'] ?? ''),
                 isset($data['created_by']) ? (int)$data['created_by'] : null,
                 $now,
@@ -412,14 +417,17 @@ class Storage
         $plates = round((float)$data['glock_the_plates'], 2);
         $glockm = round((float)$data['glock_m'], 2);
         $penalties = round((float)($data['penalties'] ?? 0), 2);
-        $total = round($five + $plates + $glockm + $penalties, 2);
+        $total = isset($data['total_time'])
+            ? round((float)$data['total_time'], 2)
+            : round($five + $plates + $glockm + $penalties, 2);
+        $stageDetails = (string)($data['stage_details'] ?? '');
         $now = date('Y-m-d H:i:s');
 
         $this->dbExec(
             'UPDATE match_results SET
              user_id = ?, match_name = ?, match_date = ?, location = ?, division = ?,
              five_to_glock = ?, glock_the_plates = ?, glock_m = ?, penalties = ?, total_time = ?,
-             notes = ?, updated_at = ?
+             stage_details = ?, notes = ?, updated_at = ?
              WHERE id = ?',
             [
                 (int)$data['user_id'],
@@ -432,6 +440,7 @@ class Storage
                 $glockm,
                 $penalties,
                 $total,
+                $stageDetails,
                 trim($data['notes'] ?? ''),
                 $now,
                 $id,

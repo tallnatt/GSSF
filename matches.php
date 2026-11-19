@@ -91,9 +91,7 @@ render_header('Matches', 'matches', $user, $auth);
                 <?php else: ?>
                     <?php foreach ($matches as $m): ?>
                         <?php
-                        $logUrl = 'results.php?new=1&match_name=' . urlencode($m['match_name'])
-                            . '&match_date=' . urlencode($m['match_date'])
-                            . '&location=' . urlencode($m['location']);
+                        $logUrl = 'results.php?new=1&match_id=' . (int)$m['id'];
                         ?>
                         <tr>
                             <td class="mono"><?= e($m['match_date']) ?></td>

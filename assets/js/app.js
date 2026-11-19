@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Modal open / close helpers
     const openModal = (modalId) => {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -18,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetResultForm();
             } else if (targetId === 'user-modal') {
                 resetUserForm();
+            } else if (targetId === 'match-modal') {
+                resetMatchForm();
             }
             openModal(targetId);
         });
@@ -33,22 +34,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Live GSSF stage total calculation
-    const stageInputs = document.querySelectorAll('.js-stage-input');
-    const totalPreview = document.getElementById('stage-total-preview');
+    // -------------------------------------------------------------------------
+    // Live GSSF Stage & Match Total Calculations
+    // -------------------------------------------------------------------------
+    const numVal = (el) => parseFloat(el?.value || '0') || 0;
 
-    const updateStageTotal = () => {
-        if (!totalPreview) return;
-        const five = parseFloat(document.getElementById('stage-five')?.value || '0') || 0;
-        const plates = parseFloat(document.getElementById('stage-plates')?.value || '0') || 0;
-        const glockm = parseFloat(document.getElementById('stage-glockm')?.value || '0') || 0;
-        const penalties = parseFloat(document.getElementById('stage-penalties')?.value || '0') || 0;
-        const total = five + plates + glockm + penalties;
-        totalPreview.textContent = total.toFixed(2) + 's';
+    const calcStageSum = (stringSelector, penaltyId) => {
+        let sum = 0;
+        document.querySelectorAll(stringSelector).forEach((inp) => {
+            sum += numVal(inp);
+        });
+        sum += numVal(document.getElementById(penaltyId));
+        return sum;
     };
 
-    stageInputs.forEach((input) => {
-        input.addEventListener('input', updateStageTotal);
+    const updateAllStageTotals = () => {
+        const fiveTotal = calcStageSum('.js-five-string', 'five-pen');
+        const platesTotal = calcStageSum('.js-plates-string', 'plates-pen');
+        const glockmTotal = calcStageSum('.js-glockm-string', 'glockm-pen');
+        const matchTotal = fiveTotal + platesTotal + glockmTotal;
+
+        const fiveEl = document.getElementById('stage-five-total');
+        const platesEl = document.getElementById('stage-plates-total');
+        const glockmEl = document.getElementById('stage-glockm-total');
+        const totalEl = document.getElementById('stage-total-preview');
+
+        if (fiveEl) fiveEl.textContent = fiveTotal.toFixed(2) + 's';
+        if (platesEl) platesEl.textContent = platesTotal.toFixed(2) + 's';
+        if (glockmEl) glockmEl.textContent = glockmTotal.toFixed(2) + 's';
+        if (totalEl) totalEl.textContent = matchTotal.toFixed(2) + 's';
+    };
+
+    document.querySelectorAll('.js-stage-field').forEach((input) => {
+        input.addEventListener('input', updateAllStageTotals);
     });
 
     // Sync default division when picking shooter on new result
@@ -67,23 +85,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function setInputsFromArray(selector, values, defaultVal = '') {
+        const inputs = Array.from(document.querySelectorAll(selector));
+        inputs.forEach((inp, idx) => {
+            if (values && idx < values.length && values[idx] !== null && values[idx] !== undefined) {
+                inp.value = Number(values[idx]).toFixed(2);
+            } else {
+                inp.value = defaultVal;
+            }
+        });
+    }
+
     function resetResultForm() {
         const title = document.getElementById('result-modal-title');
-        if (title) title.textContent = 'Add Event Time';
+        if (title) title.textContent = 'Add Match Time';
         const setVal = (id, val) => {
             const el = document.getElementById(id);
             if (el) el.value = val;
         };
         setVal('result-id', '0');
-        setVal('result-match-name', '');
-        setVal('result-match-date', new Date().toISOString().slice(0, 10));
-        setVal('result-location', '');
-        setVal('stage-five', '');
-        setVal('stage-plates', '');
-        setVal('stage-glockm', '');
-        setVal('stage-penalties', '0.00');
+        setVal('result-match-id', '');
+        setInputsFromArray('.js-five-string', [], '');
+        setVal('five-pen', '0.00');
+        setInputsFromArray('.js-plates-string', [], '');
+        setVal('plates-pen', '0.00');
+        setInputsFromArray('.js-glockm-string', [], '');
+        setVal('glockm-pen', '0.00');
         setVal('result-notes', '');
-        updateStageTotal();
+        updateAllStageTotals();
     }
 
     // Edit Result buttons
@@ -91,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const data = JSON.parse(btn.getAttribute('data-result') || '{}');
             const title = document.getElementById('result-modal-title');
-            if (title) title.textContent = 'Edit Event Time';
+            if (title) title.textContent = 'Edit Match Time';
 
             const setVal = (id, val) => {
                 const el = document.getElementById(id);
@@ -101,18 +130,76 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('result-id', data.id);
             setVal('result-user', data.user_id);
             setVal('result-division', data.division);
-            setVal('result-match-name', data.match_name);
-            setVal('result-match-date', data.match_date);
-            setVal('result-location', data.location);
-            setVal('stage-five', Number(data.five_to_glock || 0).toFixed(2));
-            setVal('stage-plates', Number(data.glock_the_plates || 0).toFixed(2));
-            setVal('stage-glockm', Number(data.glock_m || 0).toFixed(2));
-            setVal('stage-penalties', Number(data.penalties || 0).toFixed(2));
             setVal('result-notes', data.notes);
-            updateStageTotal();
+
+            // Match dropdown selection by match_name & match_date
+            const matchSelect = document.getElementById('result-match-id');
+            if (matchSelect) {
+                let matchedVal = '';
+                Array.from(matchSelect.options).forEach((opt) => {
+                    if (
+                        opt.getAttribute('data-name') === data.match_name &&
+                        opt.getAttribute('data-date') === data.match_date
+                    ) {
+                        matchedVal = opt.value;
+                    }
+                });
+                matchSelect.value = matchedVal;
+            }
+
+            let details = null;
+            if (data.stage_details) {
+                try {
+                    details = JSON.parse(data.stage_details);
+                } catch (_) {
+                    details = null;
+                }
+            }
+
+            if (details && details.five_to_glock) {
+                setInputsFromArray('.js-five-string', details.five_to_glock.strings || [], '0.00');
+                setVal('five-pen', Number(details.five_to_glock.penalties || 0).toFixed(2));
+            } else {
+                setInputsFromArray('.js-five-string', [Number(data.five_to_glock || 0), 0, 0], '0.00');
+                setVal('five-pen', '0.00');
+            }
+
+            if (details && details.glock_the_plates) {
+                setInputsFromArray('.js-plates-string', details.glock_the_plates.strings || [], '0.00');
+                setVal('plates-pen', Number(details.glock_the_plates.penalties || 0).toFixed(2));
+            } else {
+                setInputsFromArray('.js-plates-string', [Number(data.glock_the_plates || 0), 0, 0, 0], '0.00');
+                setVal('plates-pen', '0.00');
+            }
+
+            if (details && details.glock_m) {
+                setInputsFromArray('.js-glockm-string', details.glock_m.strings || [], '0.00');
+                setVal('glockm-pen', Number(details.glock_m.penalties || 0).toFixed(2));
+            } else {
+                setInputsFromArray('.js-glockm-string', [Number(data.glock_m || 0), 0, 0], '0.00');
+                setVal('glockm-pen', '0.00');
+            }
+
+            updateAllStageTotals();
             openModal('result-modal');
         });
     });
+
+    // -------------------------------------------------------------------------
+    // User Modal & Color Palette
+    // -------------------------------------------------------------------------
+    function selectUserColor(hex) {
+        const radios = Array.from(document.querySelectorAll('.js-user-color-radio'));
+        let matched = false;
+        radios.forEach((r) => {
+            const isMatch = r.value.toLowerCase() === (hex || '').toLowerCase();
+            r.checked = isMatch;
+            if (isMatch) matched = true;
+        });
+        if (!matched && radios.length > 0) {
+            radios[0].checked = true;
+        }
+    }
 
     function resetUserForm() {
         const title = document.getElementById('user-modal-title');
@@ -129,14 +216,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('user-display-name', '');
         setVal('user-username', '');
         setVal('user-division', 'Amateur Civilian');
-        setVal('user-color', '#1d4ed8');
+        selectUserColor('#1d4ed8');
         setVal('user-role', 'member');
         setVal('user-password', '');
         const activeBox = document.getElementById('user-active');
         if (activeBox) activeBox.checked = true;
     }
 
-    // Edit User buttons
     document.querySelectorAll('.js-edit-user').forEach((btn) => {
         btn.addEventListener('click', () => {
             const data = JSON.parse(btn.getAttribute('data-user') || '{}');
@@ -154,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('user-display-name', data.display_name);
             setVal('user-username', data.username);
             setVal('user-division', data.default_division || 'Amateur Civilian');
-            setVal('user-color', data.color || '#1d4ed8');
+            selectUserColor(data.color || '#1d4ed8');
             setVal('user-role', data.role || 'member');
             setVal('user-password', '');
             const activeBox = document.getElementById('user-active');
@@ -163,21 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Saved match quick-fill in Match Times modal
-    const savedMatchSelect = document.getElementById('result-saved-match');
-    if (savedMatchSelect) {
-        savedMatchSelect.addEventListener('change', () => {
-            const opt = savedMatchSelect.options[savedMatchSelect.selectedIndex];
-            if (!opt || !opt.value) return;
-            const nameEl = document.getElementById('result-match-name');
-            const dateEl = document.getElementById('result-match-date');
-            const locEl = document.getElementById('result-location');
-            if (nameEl) nameEl.value = opt.getAttribute('data-name') || '';
-            if (dateEl) dateEl.value = opt.getAttribute('data-date') || '';
-            if (locEl) locEl.value = opt.getAttribute('data-location') || '';
-        });
-    }
-
+    // -------------------------------------------------------------------------
+    // Match Modal
+    // -------------------------------------------------------------------------
     function resetMatchForm() {
         const title = document.getElementById('match-modal-title');
         if (title) title.textContent = 'Add Match';

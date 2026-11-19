@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS `match_results` (
   `glock_m` DECIMAL(8,2) NOT NULL,
   `penalties` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
   `total_time` DECIMAL(8,2) NOT NULL,
+  `stage_details` TEXT NULL,
   `notes` TEXT NULL,
   `created_by` INT UNSIGNED NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

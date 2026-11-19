@@ -217,12 +217,21 @@ render_header('Family Shooters', 'users', $user, $auth);
                 </div>
 
                 <div class="field">
-                    <label for="user-color">Graph Color</label>
-                    <select id="user-color" name="color">
-                        <?php foreach ($palette as $hex): ?>
-                            <option value="<?= e($hex) ?>"><?= e($hex) ?></option>
+                    <label>Graph Color</label>
+                    <div class="color-palette" id="user-color-palette" role="radiogroup" aria-label="Graph Color">
+                        <?php foreach ($palette as $idx => $hex): ?>
+                            <label class="color-swatch-label" title="Select color">
+                                <input
+                                    type="radio"
+                                    name="color"
+                                    value="<?= e($hex) ?>"
+                                    class="js-user-color-radio"
+                                    <?= $idx === 0 ? 'checked' : '' ?>
+                                >
+                                <span class="color-swatch" style="background-color: <?= e($hex) ?>;"></span>
+                            </label>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
                 </div>
 
                 <?php if ($isAdmin): ?>
