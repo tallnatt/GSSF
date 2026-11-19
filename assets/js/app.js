@@ -112,36 +112,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultDivisionSelect = document.getElementById('result-division');
     const resultMatchSelect = document.getElementById('result-match-id');
 
+    const allMatchOptions = resultMatchSelect
+        ? Array.from(resultMatchSelect.options)
+            .filter((opt) => opt.value !== '')
+            .map((opt) => {
+                let shooters = [];
+                try {
+                    shooters = JSON.parse(opt.getAttribute('data-shooters') || '[]').map((id) => Number(id));
+                } catch (_) {
+                    shooters = [];
+                }
+                return {
+                    value: opt.value,
+                    text: opt.textContent,
+                    name: opt.getAttribute('data-name') || '',
+                    date: opt.getAttribute('data-date') || '',
+                    shooters,
+                };
+            })
+        : [];
+
     const filterMatchesForSelectedUser = () => {
         if (!resultUserSelect || !resultMatchSelect) return;
         const selectedUid = parseInt(resultUserSelect.value || '0', 10);
-        let visibleCount = 0;
+        const prevVal = resultMatchSelect.value;
 
-        Array.from(resultMatchSelect.options).forEach((opt) => {
-            if (!opt.value) return;
-            let shooters = [];
-            try {
-                shooters = JSON.parse(opt.getAttribute('data-shooters') || '[]').map((id) => Number(id));
-            } catch (_) {
-                shooters = [];
+        const matching = allMatchOptions.filter(
+            (m) => selectedUid > 0 && m.shooters.includes(selectedUid)
+        );
+
+        resultMatchSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = matching.length > 0
+            ? '— Select a match —'
+            : '— No matches assigned to this shooter —';
+        resultMatchSelect.appendChild(placeholder);
+
+        let restored = false;
+        matching.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = m.value;
+            opt.textContent = m.text;
+            opt.setAttribute('data-name', m.name);
+            opt.setAttribute('data-date', m.date);
+            resultMatchSelect.appendChild(opt);
+            if (m.value === prevVal) {
+                restored = true;
             }
-            const participated = selectedUid > 0 && shooters.includes(selectedUid);
-            opt.hidden = !participated;
-            opt.disabled = !participated;
-            if (participated) visibleCount++;
         });
 
-        const placeholder = resultMatchSelect.querySelector('option[value=""]');
-        if (placeholder) {
-            placeholder.textContent = visibleCount > 0
-                ? '— Select a match —'
-                : '— No matches assigned to this shooter —';
-        }
-
-        const currentOpt = resultMatchSelect.options[resultMatchSelect.selectedIndex];
-        if (currentOpt && currentOpt.value && currentOpt.disabled) {
-            resultMatchSelect.value = '';
-        }
+        resultMatchSelect.value = restored ? prevVal : '';
     };
 
     if (resultUserSelect) {
