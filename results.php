@@ -409,6 +409,7 @@ render_header('Match Times', 'results', $user, $auth);
                                     value="<?= (int)$sm['id'] ?>"
                                     data-name="<?= e($sm['match_name']) ?>"
                                     data-date="<?= e($sm['match_date']) ?>"
+                                    data-shooters="<?= e(json_encode($sm['shooter_ids'] ?? [])) ?>"
                                     <?= $prefillMatchId === (int)$sm['id'] ? 'selected' : '' ?>
                                 >
                                     <?= e($sm['match_date']) ?> — <?= e($sm['match_name']) ?><?= !empty($sm['location']) ? ' (' . e($sm['location']) . ')' : '' ?>

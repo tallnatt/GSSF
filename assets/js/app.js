@@ -107,13 +107,49 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('input', updateAllStageTotals);
     });
 
-    // Sync default division when picking shooter on new result
+    // Sync default division & filter matches when picking shooter
     const resultUserSelect = document.getElementById('result-user');
     const resultDivisionSelect = document.getElementById('result-division');
-    if (resultUserSelect && resultDivisionSelect) {
+    const resultMatchSelect = document.getElementById('result-match-id');
+
+    const filterMatchesForSelectedUser = () => {
+        if (!resultUserSelect || !resultMatchSelect) return;
+        const selectedUid = parseInt(resultUserSelect.value || '0', 10);
+        let visibleCount = 0;
+
+        Array.from(resultMatchSelect.options).forEach((opt) => {
+            if (!opt.value) return;
+            let shooters = [];
+            try {
+                shooters = JSON.parse(opt.getAttribute('data-shooters') || '[]').map((id) => Number(id));
+            } catch (_) {
+                shooters = [];
+            }
+            const participated = selectedUid > 0 && shooters.includes(selectedUid);
+            opt.hidden = !participated;
+            opt.disabled = !participated;
+            if (participated) visibleCount++;
+        });
+
+        const placeholder = resultMatchSelect.querySelector('option[value=""]');
+        if (placeholder) {
+            placeholder.textContent = visibleCount > 0
+                ? '— Select a match —'
+                : '— No matches assigned to this shooter —';
+        }
+
+        const currentOpt = resultMatchSelect.options[resultMatchSelect.selectedIndex];
+        if (currentOpt && currentOpt.value && currentOpt.disabled) {
+            resultMatchSelect.value = '';
+        }
+    };
+
+    if (resultUserSelect) {
+        filterMatchesForSelectedUser();
         resultUserSelect.addEventListener('change', () => {
+            filterMatchesForSelectedUser();
             const resultId = parseInt(document.getElementById('result-id')?.value || '0', 10);
-            if (resultId === 0) {
+            if (resultId === 0 && resultDivisionSelect) {
                 const selectedOpt = resultUserSelect.options[resultUserSelect.selectedIndex];
                 const defaultDiv = selectedOpt?.getAttribute('data-division');
                 if (defaultDiv) {
@@ -159,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('glockm-pen-3', '0');
         setVal('glockm-pen-miss', '0');
         setVal('glockm-pen-proc', '0');
+        filterMatchesForSelectedUser();
         updateAllStageTotals();
     }
 
@@ -176,22 +213,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setVal('result-id', data.id);
             setVal('result-user', data.user_id);
+            filterMatchesForSelectedUser();
             setVal('result-division', data.division);
             setVal('result-gun', data.gun || '');
 
             // Match dropdown selection by match_name & match_date
-            const matchSelect = document.getElementById('result-match-id');
-            if (matchSelect) {
+            if (resultMatchSelect) {
                 let matchedVal = '';
-                Array.from(matchSelect.options).forEach((opt) => {
+                Array.from(resultMatchSelect.options).forEach((opt) => {
                     if (
+                        !opt.disabled &&
                         opt.getAttribute('data-name') === data.match_name &&
                         opt.getAttribute('data-date') === data.match_date
                     ) {
                         matchedVal = opt.value;
                     }
                 });
-                matchSelect.value = matchedVal;
+                resultMatchSelect.value = matchedVal;
             }
 
             let details = null;
