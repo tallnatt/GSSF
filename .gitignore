@@ -1,0 +1,6 @@
+# Local data & environment overrides
+/data/*.json
+/data/sessions/
+/config.local.php
+.DS_Store
+Thumbs.db

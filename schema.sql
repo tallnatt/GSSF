@@ -1,0 +1,43 @@
+-- GSSF Family Match Tracker - MySQL / MariaDB Schema
+-- Run: mysql -u root -p < schema.sql
+
+CREATE DATABASE IF NOT EXISTS `gssf_tracker`
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE `gssf_tracker`;
+
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(64) NOT NULL,
+  `display_name` VARCHAR(100) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` ENUM('admin', 'member') NOT NULL DEFAULT 'member',
+  `default_division` VARCHAR(64) NOT NULL DEFAULT 'Amateur Civilian',
+  `color` VARCHAR(16) NOT NULL DEFAULT '#1d4ed8',
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `match_results` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` INT UNSIGNED NOT NULL,
+  `match_name` VARCHAR(120) NOT NULL,
+  `match_date` DATE NOT NULL,
+  `location` VARCHAR(120) NOT NULL DEFAULT '',
+  `division` VARCHAR(64) NOT NULL DEFAULT 'Amateur Civilian',
+  `five_to_glock` DECIMAL(8,2) NOT NULL,
+  `glock_the_plates` DECIMAL(8,2) NOT NULL,
+  `glock_m` DECIMAL(8,2) NOT NULL,
+  `penalties` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  `total_time` DECIMAL(8,2) NOT NULL,
+  `notes` TEXT NULL,
+  `created_by` INT UNSIGNED NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_date` (`user_id`, `match_date`),
+  CONSTRAINT `fk_results_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
