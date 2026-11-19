@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40" role="img" aria-label="GSSF Logo">
+  <rect x="1.5" y="1.5" width="117" height="37" rx="6" fill="#18181b" stroke="#b45309" stroke-width="2"/>
+  <circle cx="21" cy="20" r="10.5" fill="none" stroke="#f59e0b" stroke-width="1.8"/>
+  <circle cx="21" cy="20" r="5" fill="none" stroke="#f59e0b" stroke-width="1.4"/>
+  <line x1="21" y1="7" x2="21" y2="12.5" stroke="#f59e0b" stroke-width="1.5"/>
+  <line x1="21" y1="27.5" x2="21" y2="33" stroke="#f59e0b" stroke-width="1.5"/>
+  <line x1="8" y1="20" x2="13.5" y2="20" stroke="#f59e0b" stroke-width="1.5"/>
+  <line x1="28.5" y1="20" x2="34" y2="20" stroke="#f59e0b" stroke-width="1.5"/>
+  <circle cx="21" cy="20" r="1.8" fill="#f59e0b"/>
+  <text x="41" y="26.5" font-family="Plus Jakarta Sans, Arial, sans-serif" font-weight="800" font-size="20" letter-spacing="1.5" fill="#ffffff">GSSF</text>
+</svg>

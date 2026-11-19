@@ -35,7 +35,7 @@ function render_header(string $title, string $activeNav, array $user, Auth $auth
 <header class="site-header">
     <div class="header-inner">
         <a href="index.php" class="brand" id="brand-home">
-            <span class="brand-mark" aria-hidden="true">G</span>
+            <img src="assets/img/gssf-logo.svg" alt="GSSF" class="brand-logo">
             <span class="brand-text">
                 <span class="brand-title">GSSF Family Tracker</span>
                 <span class="brand-sub">Match Timers &amp; Progress</span>

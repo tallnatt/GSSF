@@ -55,7 +55,7 @@ $csrf = e($auth->csrfToken());
     </div>
     <section class="auth-card" aria-labelledby="login-heading">
         <div class="auth-brand">
-            <span class="brand-mark" aria-hidden="true">G</span>
+            <img src="assets/img/gssf-logo.svg" alt="GSSF" class="brand-logo">
             <div>
                 <h1 id="login-heading">GSSF Family Tracker</h1>
                 <p class="auth-subtitle">Sign in to log match times and compare progress</p>

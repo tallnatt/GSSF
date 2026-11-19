@@ -147,6 +147,41 @@ body {
     letter-spacing: -0.02em;
 }
 
+.brand-logo {
+    height: 36px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+}
+
+#btn-theme-toggle {
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+[data-theme="light"] #btn-theme-toggle,
+:root:not([data-theme="dark"]) #btn-theme-toggle {
+    background-color: #191b20;
+    color: #f4f4f5;
+    border-color: #3d424f;
+}
+
+[data-theme="light"] #btn-theme-toggle:hover,
+:root:not([data-theme="dark"]) #btn-theme-toggle:hover {
+    background-color: #272b34;
+    color: #ffffff;
+}
+
+[data-theme="dark"] #btn-theme-toggle {
+    background-color: #f6f5f1;
+    color: #18181b;
+    border-color: #cdc8bc;
+}
+
+[data-theme="dark"] #btn-theme-toggle:hover {
+    background-color: #ffffff;
+    color: #18181b;
+}
+
 .brand-text {
     display: flex;
     flex-direction: column;
