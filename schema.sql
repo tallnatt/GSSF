@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS `match_results` (
   `match_date` DATE NOT NULL,
   `location` VARCHAR(120) NOT NULL DEFAULT '',
   `division` VARCHAR(64) NOT NULL DEFAULT 'Amateur Civilian',
+  `gun` VARCHAR(64) NOT NULL DEFAULT '',
   `five_to_glock` DECIMAL(8,2) NOT NULL,
   `glock_the_plates` DECIMAL(8,2) NOT NULL,
   `glock_m` DECIMAL(8,2) NOT NULL,

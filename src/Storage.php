@@ -183,6 +183,7 @@ class Storage
             match_date TEXT NOT NULL,
             location TEXT NOT NULL DEFAULT '',
             division TEXT NOT NULL DEFAULT 'Amateur Civilian',
+            gun TEXT NOT NULL DEFAULT '',
             five_to_glock REAL NOT NULL,
             glock_the_plates REAL NOT NULL,
             glock_m REAL NOT NULL,
@@ -236,6 +237,26 @@ class Storage
             $this->pdo->exec($schema);
         } else {
             $this->runSqliteCli($schema, false);
+        }
+
+        // Safe migration for existing SQLite databases missing stage_details or gun
+        $cols = $this->dbAll('PRAGMA table_info(match_results)');
+        $colNames = array_map(fn($c) => $c['name'] ?? '', $cols);
+        if (!in_array('stage_details', $colNames, true)) {
+            $alter = "ALTER TABLE match_results ADD COLUMN stage_details TEXT NOT NULL DEFAULT ''";
+            if (!$this->useSqliteCli) {
+                $this->pdo->exec($alter);
+            } else {
+                $this->runSqliteCli($alter, false);
+            }
+        }
+        if (!in_array('gun', $colNames, true)) {
+            $alter = "ALTER TABLE match_results ADD COLUMN gun TEXT NOT NULL DEFAULT ''";
+            if (!$this->useSqliteCli) {
+                $this->pdo->exec($alter);
+            } else {
+                $this->runSqliteCli($alter, false);
+            }
         }
     }
 
@@ -345,6 +366,15 @@ class Storage
             $where[] = 'r.match_date <= ?';
             $params[] = $filters['date_to'];
         }
+        if (!empty($filters['gun'])) {
+            $where[] = 'r.gun = ?';
+            $params[] = $filters['gun'];
+        }
+        if (!empty($filters['match_name']) && !empty($filters['match_date'])) {
+            $where[] = 'r.match_name = ? AND r.match_date = ?';
+            $params[] = $filters['match_name'];
+            $params[] = $filters['match_date'];
+        }
         if (!empty($filters['search'])) {
             $where[] = '(r.match_name LIKE ? OR r.location LIKE ? OR r.notes LIKE ?)';
             $q = '%' . $filters['search'] . '%';
@@ -389,14 +419,15 @@ class Storage
 
         return $this->dbInsert(
             'INSERT INTO match_results
-             (user_id, match_name, match_date, location, division, five_to_glock, glock_the_plates, glock_m, penalties, total_time, stage_details, notes, created_by, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             (user_id, match_name, match_date, location, division, gun, five_to_glock, glock_the_plates, glock_m, penalties, total_time, stage_details, notes, created_by, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 (int)$data['user_id'],
                 trim($data['match_name']),
                 $data['match_date'],
                 trim($data['location'] ?? ''),
                 trim($data['division'] ?? 'Amateur Civilian'),
+                trim($data['gun'] ?? ''),
                 $five,
                 $plates,
                 $glockm,
@@ -425,7 +456,7 @@ class Storage
 
         $this->dbExec(
             'UPDATE match_results SET
-             user_id = ?, match_name = ?, match_date = ?, location = ?, division = ?,
+             user_id = ?, match_name = ?, match_date = ?, location = ?, division = ?, gun = ?,
              five_to_glock = ?, glock_the_plates = ?, glock_m = ?, penalties = ?, total_time = ?,
              stage_details = ?, notes = ?, updated_at = ?
              WHERE id = ?',
@@ -435,6 +466,7 @@ class Storage
                 $data['match_date'],
                 trim($data['location'] ?? ''),
                 trim($data['division'] ?? 'Amateur Civilian'),
+                trim($data['gun'] ?? ''),
                 $five,
                 $plates,
                 $glockm,
@@ -644,6 +676,15 @@ class Storage
         if (!empty($filters['division'])) {
             $where[] = 'r.division = ?';
             $params[] = $filters['division'];
+        }
+        if (!empty($filters['gun'])) {
+            $where[] = 'r.gun = ?';
+            $params[] = $filters['gun'];
+        }
+        if (!empty($filters['match_name']) && !empty($filters['match_date'])) {
+            $where[] = 'r.match_name = ? AND r.match_date = ?';
+            $params[] = $filters['match_name'];
+            $params[] = $filters['match_date'];
         }
         if (!empty($filters['search'])) {
             $where[] = '(r.match_name LIKE ? OR r.location LIKE ? OR r.notes LIKE ?)';

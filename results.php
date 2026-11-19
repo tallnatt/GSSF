@@ -6,6 +6,7 @@ require_once __DIR__ . '/src/bootstrap.php';
 $user = $auth->requireLogin();
 $users = $storage->getUsers(false);
 $divisions = gssf_divisions();
+$guns = gssf_guns();
 
 $flashSuccess = '';
 $flashError = '';
@@ -20,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userId = (int)($_POST['user_id'] ?? 0);
             $matchId = (int)($_POST['match_id'] ?? 0);
             $division = trim((string)($_POST['division'] ?? 'Amateur Civilian'));
+            $gun = trim((string)($_POST['gun'] ?? ''));
             $notes = trim((string)($_POST['notes'] ?? ''));
 
             $match = $matchId > 0 ? $storage->getMatchById($matchId) : null;
@@ -115,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'match_date' => $match['match_date'],
                     'location' => $match['location'] ?? '',
                     'division' => $division,
+                    'gun' => $gun,
                     'five_to_glock' => $fiveTotal,
                     'glock_the_plates' => $platesTotal,
                     'glock_m' => $glockmTotal,
@@ -144,15 +147,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$savedMatches = $storage->getMatches();
+$filterMatchId = isset($_GET['filter_match_id']) && $_GET['filter_match_id'] !== '' ? (int)$_GET['filter_match_id'] : null;
+$filterMatch = $filterMatchId ? $storage->getMatchById($filterMatchId) : null;
+
 $filters = [
     'user_id' => isset($_GET['user_id']) && $_GET['user_id'] !== '' ? (int)$_GET['user_id'] : null,
     'division' => trim((string)($_GET['division'] ?? '')),
-    'search' => trim((string)($_GET['search'] ?? '')),
+    'gun' => trim((string)($_GET['gun'] ?? '')),
+    'match_name' => $filterMatch['match_name'] ?? '',
+    'match_date' => $filterMatch['match_date'] ?? '',
 ];
 
 $results = $storage->getResults($filters);
 $divisionTotals = $storage->getShooterDivisionTotals($filters);
-$savedMatches = $storage->getMatches();
 
 $editingResult = null;
 if (isset($_GET['edit'])) {
@@ -230,9 +238,27 @@ render_header('Match Times', 'results', $user, $auth);
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="field">
+            <label for="filter-gun">Gun</label>
+            <select id="filter-gun" name="gun">
+                <option value="">All Guns</option>
+                <?php foreach ($guns as $g): ?>
+                    <option value="<?= e($g) ?>" <?= $filters['gun'] === $g ? 'selected' : '' ?>>
+                        <?= e($g) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
         <div class="field field-grow">
-            <label for="filter-search">Search Match / Location</label>
-            <input type="text" id="filter-search" name="search" value="<?= e($filters['search']) ?>" placeholder="e.g. Oakdale, Regional...">
+            <label for="filter-match">Match</label>
+            <select id="filter-match" name="filter_match_id">
+                <option value="">All Matches</option>
+                <?php foreach ($savedMatches as $sm): ?>
+                    <option value="<?= (int)$sm['id'] ?>" <?= $filterMatchId === (int)$sm['id'] ? 'selected' : '' ?>>
+                        <?= e($sm['match_date']) ?> — <?= e($sm['match_name']) ?><?= !empty($sm['location']) ? ' (' . e($sm['location']) . ')' : '' ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <div class="filter-actions">
             <button type="submit" id="btn-apply-filters" class="btn btn-secondary">Filter</button>
@@ -294,6 +320,7 @@ render_header('Match Times', 'results', $user, $auth);
                     <th>Match</th>
                     <th>Shooter</th>
                     <th>Division</th>
+                    <th>Gun</th>
                     <th class="num">5-to-Glock</th>
                     <th class="num">Plates</th>
                     <th class="num">Glock 'M</th>
@@ -304,7 +331,7 @@ render_header('Match Times', 'results', $user, $auth);
             </thead>
             <tbody>
                 <?php if (empty($results)): ?>
-                    <tr><td colspan="10" class="empty-cell">No match results match the current filters.</td></tr>
+                    <tr><td colspan="11" class="empty-cell">No match results match the current filters.</td></tr>
                 <?php else: ?>
                     <?php foreach ($results as $r): ?>
                         <tr>
@@ -325,6 +352,7 @@ render_header('Match Times', 'results', $user, $auth);
                                 </span>
                             </td>
                             <td><span class="tag"><?= e($r['division']) ?></span></td>
+                            <td><?= !empty($r['gun']) ? '<span class="tag">' . e($r['gun']) . '</span>' : '<span class="muted-note">—</span>' ?></td>
                             <td class="num mono"><?= e(format_time((float)$r['five_to_glock'])) ?></td>
                             <td class="num mono"><?= e(format_time((float)$r['glock_the_plates'])) ?></td>
                             <td class="num mono"><?= e(format_time((float)$r['glock_m'])) ?></td>
@@ -415,6 +443,21 @@ render_header('Match Times', 'results', $user, $auth);
                         ?>
                             <option value="<?= e($div) ?>" <?= $selectedDiv === $div ? 'selected' : '' ?>>
                                 <?= e($div) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="field field-span-2">
+                    <label for="result-gun">Gun Used</label>
+                    <select id="result-gun" name="gun" required>
+                        <option value="">— Select gun —</option>
+                        <?php
+                        $selectedGun = $editingResult['gun'] ?? '';
+                        foreach ($guns as $g):
+                        ?>
+                            <option value="<?= e($g) ?>" <?= $selectedGun === $g ? 'selected' : '' ?>>
+                                <?= e($g) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

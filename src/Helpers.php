@@ -31,6 +31,36 @@ function gssf_divisions(): array
     ];
 }
 
+function gssf_guns(): array
+{
+    return [
+        'G17',
+        'G19',
+        'G19X',
+        'G20',
+        'G21',
+        'G22',
+        'G23',
+        'G26',
+        'G27',
+        'G29',
+        'G30',
+        'G34',
+        'G35',
+        'G40',
+        'G41',
+        'G42',
+        'G43',
+        'G43X',
+        'G44',
+        'G45',
+        'G47',
+        'G48',
+        'G49',
+        'Other',
+    ];
+}
+
 function shooter_palette(): array
 {
     return [

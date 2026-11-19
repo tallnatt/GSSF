@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         setVal('result-id', '0');
         setVal('result-match-id', '');
+        setVal('result-gun', '');
         setInputsFromArray('.js-five-string', [], '');
         setVal('five-pen-1', '0');
         setVal('five-pen-2', '0');
@@ -162,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setVal('result-id', data.id);
             setVal('result-user', data.user_id);
             setVal('result-division', data.division);
+            setVal('result-gun', data.gun || '');
             setVal('result-notes', data.notes);
 
             // Match dropdown selection by match_name & match_date
