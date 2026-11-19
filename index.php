@@ -6,9 +6,10 @@ require_once __DIR__ . '/src/bootstrap.php';
 $user = $auth->requireLogin();
 $users = $storage->getUsers(true);
 $results = $storage->getResults();
+$matches = $storage->getMatches();
 
 // Compute family summary & personal bests
-$totalMatchesCount = count($results);
+$totalMatchesCount = count($matches);
 $bestOverall = null;
 $latestDate = null;
 
@@ -16,7 +17,7 @@ $shooterStats = [];
 foreach ($users as $u) {
     $shooterStats[(int)$u['id']] = [
         'user' => $u,
-        'count' => 0,
+        'distinct_matches' => [],
         'best_total' => null,
         'best_five' => null,
         'best_plates' => null,
@@ -40,7 +41,8 @@ foreach ($results as $r) {
         continue;
     }
     $s = &$shooterStats[$uid];
-    $s['count']++;
+    $matchKey = $r['match_date'] . '|' . $r['match_name'];
+    $s['distinct_matches'][$matchKey] = true;
 
     if ($s['best_total'] === null || $total < $s['best_total']) {
         $s['best_total'] = $total;
@@ -81,9 +83,9 @@ render_header('Overview', 'overview', $user, $auth);
 
 <section class="stats-row" aria-label="Season Summary">
     <div class="stat-card">
-        <span class="stat-label">Logged Entries</span>
+        <span class="stat-label">Total Matches</span>
         <strong class="stat-value mono"><?= $totalMatchesCount ?></strong>
-        <span class="stat-meta"><?= count($users) ?> active shooters</span>
+        <span class="stat-meta"><?= count($results) ?> event entries &middot; <?= count($users) ?> active shooters</span>
     </div>
     <div class="stat-card">
         <span class="stat-label">Family Best Total</span>
