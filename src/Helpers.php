@@ -131,9 +131,6 @@ function gssf_guns_by_generation(): array
             'G48 Slimline (9mm)',
             'G48 Slimline MOS (9mm)',
         ],
-        'Other' => [
-            'Other',
-        ],
     ];
 
     $caliberOrder = [
