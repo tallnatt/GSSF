@@ -34,22 +34,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             };
 
             $fiveStrings = $parseStrings($_POST['five_strings'] ?? [], 3);
-            $fivePenalties = round((float)($_POST['five_penalties'] ?? 0), 2);
+            $fivePenCounts = [
+                'p1' => max(0, (int)($_POST['five_pen_1'] ?? 0)),
+                'p2' => max(0, (int)($_POST['five_pen_2'] ?? 0)),
+                'p3' => max(0, (int)($_POST['five_pen_3'] ?? 0)),
+                'miss' => max(0, (int)($_POST['five_pen_miss'] ?? 0)),
+                'proc' => max(0, (int)($_POST['five_pen_proc'] ?? 0)),
+            ];
+            $fivePenalties = round(
+                $fivePenCounts['p1'] * 1 + $fivePenCounts['p2'] * 2 + $fivePenCounts['p3'] * 3
+                + $fivePenCounts['miss'] * 10 + $fivePenCounts['proc'] * 10,
+                2
+            );
 
             $platesStrings = $parseStrings($_POST['plates_strings'] ?? [], 4);
-            $platesPenalties = round((float)($_POST['plates_penalties'] ?? 0), 2);
+            $platesPenCounts = [
+                'miss' => max(0, (int)($_POST['plates_pen_miss'] ?? 0)),
+                'proc' => max(0, (int)($_POST['plates_pen_proc'] ?? 0)),
+            ];
+            $platesPenalties = round(
+                $platesPenCounts['miss'] * 10 + $platesPenCounts['proc'] * 10,
+                2
+            );
 
             $glockmStrings = $parseStrings($_POST['glockm_strings'] ?? [], 3);
-            $glockmPenalties = round((float)($_POST['glockm_penalties'] ?? 0), 2);
-
-            $allNums = array_merge(
-                $fiveStrings,
-                [$fivePenalties],
-                $platesStrings,
-                [$platesPenalties],
-                $glockmStrings,
-                [$glockmPenalties]
+            $glockmPenCounts = [
+                'p1' => max(0, (int)($_POST['glockm_pen_1'] ?? 0)),
+                'p2' => max(0, (int)($_POST['glockm_pen_2'] ?? 0)),
+                'p3' => max(0, (int)($_POST['glockm_pen_3'] ?? 0)),
+                'miss' => max(0, (int)($_POST['glockm_pen_miss'] ?? 0)),
+                'proc' => max(0, (int)($_POST['glockm_pen_proc'] ?? 0)),
+            ];
+            $glockmPenalties = round(
+                $glockmPenCounts['p1'] * 1 + $glockmPenCounts['p2'] * 2 + $glockmPenCounts['p3'] * 3
+                + $glockmPenCounts['miss'] * 10 + $glockmPenCounts['proc'] * 10,
+                2
             );
+
+            $allNums = array_merge($fiveStrings, $platesStrings, $glockmStrings);
             $hasNegative = false;
             foreach ($allNums as $n) {
                 if ($n < 0) {
@@ -70,9 +92,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $matchTotal = round($fiveTotal + $platesTotal + $glockmTotal, 2);
 
                 $stageDetails = json_encode([
-                    'five_to_glock' => ['strings' => $fiveStrings, 'penalties' => $fivePenalties],
-                    'glock_the_plates' => ['strings' => $platesStrings, 'penalties' => $platesPenalties],
-                    'glock_m' => ['strings' => $glockmStrings, 'penalties' => $glockmPenalties],
+                    'five_to_glock' => [
+                        'strings' => $fiveStrings,
+                        'penalty_counts' => $fivePenCounts,
+                        'penalties' => $fivePenalties,
+                    ],
+                    'glock_the_plates' => [
+                        'strings' => $platesStrings,
+                        'penalty_counts' => $platesPenCounts,
+                        'penalties' => $platesPenalties,
+                    ],
+                    'glock_m' => [
+                        'strings' => $glockmStrings,
+                        'penalty_counts' => $glockmPenCounts,
+                        'penalties' => $glockmPenalties,
+                    ],
                 ], JSON_UNESCAPED_UNICODE);
 
                 $payload = [
@@ -390,7 +424,7 @@ render_header('Match Times', 'results', $user, $auth);
             <!-- Stage 1: Five to Glock (3 strings + penalties) -->
             <fieldset class="stage-fieldset" data-stage="five">
                 <legend>Five to Glock (seconds)</legend>
-                <div class="stage-strings-grid stage-strings-4">
+                <div class="stage-strings-grid stage-strings-3">
                     <div class="field">
                         <label for="five-s1">String 1</label>
                         <input type="number" step="0.01" min="0" id="five-s1" name="five_strings[]" class="mono js-stage-field js-five-string" required value="<?= $editingResult ? e(format_time((float)$fiveEditStrings[0])) : '' ?>" placeholder="0.00">
@@ -403,13 +437,32 @@ render_header('Match Times', 'results', $user, $auth);
                         <label for="five-s3">String 3</label>
                         <input type="number" step="0.01" min="0" id="five-s3" name="five_strings[]" class="mono js-stage-field js-five-string" required value="<?= $editingResult ? e(format_time((float)$fiveEditStrings[2])) : '' ?>" placeholder="0.00">
                     </div>
+                </div>
+                <div class="stage-penalties-label">Penalties (count)</div>
+                <div class="stage-penalties-grid stage-penalties-5">
                     <div class="field">
-                        <label for="five-pen">Penalties (+s)</label>
-                        <input type="number" step="0.01" min="0" id="five-pen" name="five_penalties" class="mono js-stage-field" value="<?= $editingResult ? e(format_time((float)$fiveEditPen)) : '0.00' ?>" placeholder="0.00">
+                        <label for="five-pen-1">1 Second</label>
+                        <input type="number" step="1" min="0" id="five-pen-1" name="five_pen_1" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p1'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="five-pen-2">2 Seconds</label>
+                        <input type="number" step="1" min="0" id="five-pen-2" name="five_pen_2" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p2'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="five-pen-3">3 Seconds</label>
+                        <input type="number" step="1" min="0" id="five-pen-3" name="five_pen_3" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['p3'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="five-pen-miss">Miss (+10 Seconds)</label>
+                        <input type="number" step="1" min="0" id="five-pen-miss" name="five_pen_miss" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['miss'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="five-pen-proc">Procedurals (+10 Seconds)</label>
+                        <input type="number" step="1" min="0" id="five-pen-proc" name="five_pen_proc" class="mono js-stage-field" value="<?= (int)($fiveEditPenCounts['proc'] ?? 0) ?>">
                     </div>
                 </div>
                 <div class="stage-subtotal">
-                    <span>Five to Glock Total</span>
+                    <span>Five to Glock Total <span class="muted-note">(Penalties: <span id="stage-five-pen-total" class="mono">+<?= e(format_time((float)$fiveEditPen)) ?>s</span>)</span></span>
                     <strong id="stage-five-total" class="mono"><?= $editingResult ? e(format_time((float)$editingResult['five_to_glock'])) . 's' : '0.00s' ?></strong>
                 </div>
             </fieldset>
@@ -417,7 +470,7 @@ render_header('Match Times', 'results', $user, $auth);
             <!-- Stage 2: Glock the Plates (4 strings + penalties) -->
             <fieldset class="stage-fieldset" data-stage="plates">
                 <legend>Glock the Plates (seconds)</legend>
-                <div class="stage-strings-grid stage-strings-5">
+                <div class="stage-strings-grid stage-strings-4">
                     <div class="field">
                         <label for="plates-s1">String 1</label>
                         <input type="number" step="0.01" min="0" id="plates-s1" name="plates_strings[]" class="mono js-stage-field js-plates-string" required value="<?= $editingResult ? e(format_time((float)$platesEditStrings[0])) : '' ?>" placeholder="0.00">
@@ -434,13 +487,20 @@ render_header('Match Times', 'results', $user, $auth);
                         <label for="plates-s4">String 4</label>
                         <input type="number" step="0.01" min="0" id="plates-s4" name="plates_strings[]" class="mono js-stage-field js-plates-string" required value="<?= $editingResult ? e(format_time((float)$platesEditStrings[3])) : '' ?>" placeholder="0.00">
                     </div>
+                </div>
+                <div class="stage-penalties-label">Penalties (count)</div>
+                <div class="stage-penalties-grid stage-penalties-2">
                     <div class="field">
-                        <label for="plates-pen">Penalties (+s)</label>
-                        <input type="number" step="0.01" min="0" id="plates-pen" name="plates_penalties" class="mono js-stage-field" value="<?= $editingResult ? e(format_time((float)$platesEditPen)) : '0.00' ?>" placeholder="0.00">
+                        <label for="plates-pen-miss">Missed (+10 Seconds)</label>
+                        <input type="number" step="1" min="0" id="plates-pen-miss" name="plates_pen_miss" class="mono js-stage-field" value="<?= (int)($platesEditPenCounts['miss'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="plates-pen-proc">Procedurals (+10 Seconds)</label>
+                        <input type="number" step="1" min="0" id="plates-pen-proc" name="plates_pen_proc" class="mono js-stage-field" value="<?= (int)($platesEditPenCounts['proc'] ?? 0) ?>">
                     </div>
                 </div>
                 <div class="stage-subtotal">
-                    <span>Glock the Plates Total</span>
+                    <span>Glock the Plates Total <span class="muted-note">(Penalties: <span id="stage-plates-pen-total" class="mono">+<?= e(format_time((float)$platesEditPen)) ?>s</span>)</span></span>
                     <strong id="stage-plates-total" class="mono"><?= $editingResult ? e(format_time((float)$editingResult['glock_the_plates'])) . 's' : '0.00s' ?></strong>
                 </div>
             </fieldset>
@@ -448,7 +508,7 @@ render_header('Match Times', 'results', $user, $auth);
             <!-- Stage 3: Glock 'M (3 strings + penalties) -->
             <fieldset class="stage-fieldset" data-stage="glockm">
                 <legend>Glock 'M (seconds)</legend>
-                <div class="stage-strings-grid stage-strings-4">
+                <div class="stage-strings-grid stage-strings-3">
                     <div class="field">
                         <label for="glockm-s1">String 1</label>
                         <input type="number" step="0.01" min="0" id="glockm-s1" name="glockm_strings[]" class="mono js-stage-field js-glockm-string" required value="<?= $editingResult ? e(format_time((float)$glockmEditStrings[0])) : '' ?>" placeholder="0.00">
@@ -461,13 +521,32 @@ render_header('Match Times', 'results', $user, $auth);
                         <label for="glockm-s3">String 3</label>
                         <input type="number" step="0.01" min="0" id="glockm-s3" name="glockm_strings[]" class="mono js-stage-field js-glockm-string" required value="<?= $editingResult ? e(format_time((float)$glockmEditStrings[2])) : '' ?>" placeholder="0.00">
                     </div>
+                </div>
+                <div class="stage-penalties-label">Penalties (count)</div>
+                <div class="stage-penalties-grid stage-penalties-5">
                     <div class="field">
-                        <label for="glockm-pen">Penalties (+s)</label>
-                        <input type="number" step="0.01" min="0" id="glockm-pen" name="glockm_penalties" class="mono js-stage-field" value="<?= $editingResult ? e(format_time((float)$glockmEditPen)) : '0.00' ?>" placeholder="0.00">
+                        <label for="glockm-pen-1">1 Second</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-1" name="glockm_pen_1" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p1'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="glockm-pen-2">2 Seconds</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-2" name="glockm_pen_2" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p2'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="glockm-pen-3">3 Seconds</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-3" name="glockm_pen_3" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['p3'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="glockm-pen-miss">Miss (+10 Seconds)</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-miss" name="glockm_pen_miss" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['miss'] ?? 0) ?>">
+                    </div>
+                    <div class="field">
+                        <label for="glockm-pen-proc">Procedurals (+10 Seconds)</label>
+                        <input type="number" step="1" min="0" id="glockm-pen-proc" name="glockm_pen_proc" class="mono js-stage-field" value="<?= (int)($glockmEditPenCounts['proc'] ?? 0) ?>">
                     </div>
                 </div>
                 <div class="stage-subtotal">
-                    <span>Glock 'M Total</span>
+                    <span>Glock 'M Total <span class="muted-note">(Penalties: <span id="stage-glockm-pen-total" class="mono">+<?= e(format_time((float)$glockmEditPen)) ?>s</span>)</span></span>
                     <strong id="stage-glockm-total" class="mono"><?= $editingResult ? e(format_time((float)$editingResult['glock_m'])) . 's' : '0.00s' ?></strong>
                 </div>
             </fieldset>

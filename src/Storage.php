@@ -467,6 +467,16 @@ class Storage
         );
     }
 
+    public function getPasskeyCountsByUser(): array
+    {
+        $rows = $this->dbAll('SELECT user_id, COUNT(*) AS cnt FROM passkeys GROUP BY user_id');
+        $out = [];
+        foreach ($rows as $r) {
+            $out[(int)$r['user_id']] = (int)$r['cnt'];
+        }
+        return $out;
+    }
+
     public function getPasskeyByCredentialId(string $credentialId): ?array
     {
         return $this->dbOne(

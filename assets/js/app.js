@@ -38,31 +38,54 @@ document.addEventListener('DOMContentLoaded', () => {
     // Live GSSF Stage & Match Total Calculations
     // -------------------------------------------------------------------------
     const numVal = (el) => parseFloat(el?.value || '0') || 0;
+    const intVal = (id) => Math.max(0, parseInt(document.getElementById(id)?.value || '0', 10) || 0);
 
-    const calcStageSum = (stringSelector, penaltyId) => {
+    const calcFiveOrGlockmPenalties = (prefix) => {
+        return (
+            intVal(`${prefix}-pen-1`) * 1 +
+            intVal(`${prefix}-pen-2`) * 2 +
+            intVal(`${prefix}-pen-3`) * 3 +
+            intVal(`${prefix}-pen-miss`) * 10 +
+            intVal(`${prefix}-pen-proc`) * 10
+        );
+    };
+
+    const calcPlatesPenalties = () => {
+        return intVal('plates-pen-miss') * 10 + intVal('plates-pen-proc') * 10;
+    };
+
+    const calcStringsSum = (stringSelector) => {
         let sum = 0;
         document.querySelectorAll(stringSelector).forEach((inp) => {
             sum += numVal(inp);
         });
-        sum += numVal(document.getElementById(penaltyId));
         return sum;
     };
 
     const updateAllStageTotals = () => {
-        const fiveTotal = calcStageSum('.js-five-string', 'five-pen');
-        const platesTotal = calcStageSum('.js-plates-string', 'plates-pen');
-        const glockmTotal = calcStageSum('.js-glockm-string', 'glockm-pen');
+        const fivePen = calcFiveOrGlockmPenalties('five');
+        const fiveTotal = calcStringsSum('.js-five-string') + fivePen;
+
+        const platesPen = calcPlatesPenalties();
+        const platesTotal = calcStringsSum('.js-plates-string') + platesPen;
+
+        const glockmPen = calcFiveOrGlockmPenalties('glockm');
+        const glockmTotal = calcStringsSum('.js-glockm-string') + glockmPen;
+
         const matchTotal = fiveTotal + platesTotal + glockmTotal;
 
-        const fiveEl = document.getElementById('stage-five-total');
-        const platesEl = document.getElementById('stage-plates-total');
-        const glockmEl = document.getElementById('stage-glockm-total');
-        const totalEl = document.getElementById('stage-total-preview');
+        const setTxt = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        };
 
-        if (fiveEl) fiveEl.textContent = fiveTotal.toFixed(2) + 's';
-        if (platesEl) platesEl.textContent = platesTotal.toFixed(2) + 's';
-        if (glockmEl) glockmEl.textContent = glockmTotal.toFixed(2) + 's';
-        if (totalEl) totalEl.textContent = matchTotal.toFixed(2) + 's';
+        setTxt('stage-five-pen-total', `+${fivePen.toFixed(2)}s`);
+        setTxt('stage-five-total', `${fiveTotal.toFixed(2)}s`);
+        setTxt('stage-plates-pen-total', `+${platesPen.toFixed(2)}s`);
+        setTxt('stage-plates-total', `${platesTotal.toFixed(2)}s`);
+        setTxt('stage-glockm-pen-total', `+${glockmPen.toFixed(2)}s`);
+        setTxt('stage-glockm-total', `${glockmTotal.toFixed(2)}s`);
+        setTxt('stage-total-preview', `${matchTotal.toFixed(2)}s`);
     };
 
     document.querySelectorAll('.js-stage-field').forEach((input) => {
@@ -106,11 +129,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('result-id', '0');
         setVal('result-match-id', '');
         setInputsFromArray('.js-five-string', [], '');
-        setVal('five-pen', '0.00');
+        setVal('five-pen-1', '0');
+        setVal('five-pen-2', '0');
+        setVal('five-pen-3', '0');
+        setVal('five-pen-miss', '0');
+        setVal('five-pen-proc', '0');
         setInputsFromArray('.js-plates-string', [], '');
-        setVal('plates-pen', '0.00');
+        setVal('plates-pen-miss', '0');
+        setVal('plates-pen-proc', '0');
         setInputsFromArray('.js-glockm-string', [], '');
-        setVal('glockm-pen', '0.00');
+        setVal('glockm-pen-1', '0');
+        setVal('glockm-pen-2', '0');
+        setVal('glockm-pen-3', '0');
+        setVal('glockm-pen-miss', '0');
+        setVal('glockm-pen-proc', '0');
         setVal('result-notes', '');
         updateAllStageTotals();
     }
@@ -158,26 +190,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (details && details.five_to_glock) {
                 setInputsFromArray('.js-five-string', details.five_to_glock.strings || [], '0.00');
-                setVal('five-pen', Number(details.five_to_glock.penalties || 0).toFixed(2));
+                const pc = details.five_to_glock.penalty_counts || {};
+                setVal('five-pen-1', pc.p1 ?? 0);
+                setVal('five-pen-2', pc.p2 ?? 0);
+                setVal('five-pen-3', pc.p3 ?? 0);
+                setVal('five-pen-miss', pc.miss ?? 0);
+                setVal('five-pen-proc', pc.proc ?? 0);
             } else {
                 setInputsFromArray('.js-five-string', [Number(data.five_to_glock || 0), 0, 0], '0.00');
-                setVal('five-pen', '0.00');
+                setVal('five-pen-1', 0);
+                setVal('five-pen-2', 0);
+                setVal('five-pen-3', 0);
+                setVal('five-pen-miss', 0);
+                setVal('five-pen-proc', 0);
             }
 
             if (details && details.glock_the_plates) {
                 setInputsFromArray('.js-plates-string', details.glock_the_plates.strings || [], '0.00');
-                setVal('plates-pen', Number(details.glock_the_plates.penalties || 0).toFixed(2));
+                const pc = details.glock_the_plates.penalty_counts || {};
+                setVal('plates-pen-miss', pc.miss ?? 0);
+                setVal('plates-pen-proc', pc.proc ?? 0);
             } else {
                 setInputsFromArray('.js-plates-string', [Number(data.glock_the_plates || 0), 0, 0, 0], '0.00');
-                setVal('plates-pen', '0.00');
+                setVal('plates-pen-miss', 0);
+                setVal('plates-pen-proc', 0);
             }
 
             if (details && details.glock_m) {
                 setInputsFromArray('.js-glockm-string', details.glock_m.strings || [], '0.00');
-                setVal('glockm-pen', Number(details.glock_m.penalties || 0).toFixed(2));
+                const pc = details.glock_m.penalty_counts || {};
+                setVal('glockm-pen-1', pc.p1 ?? 0);
+                setVal('glockm-pen-2', pc.p2 ?? 0);
+                setVal('glockm-pen-3', pc.p3 ?? 0);
+                setVal('glockm-pen-miss', pc.miss ?? 0);
+                setVal('glockm-pen-proc', pc.proc ?? 0);
             } else {
                 setInputsFromArray('.js-glockm-string', [Number(data.glock_m || 0), 0, 0], '0.00');
-                setVal('glockm-pen', '0.00');
+                setVal('glockm-pen-1', 0);
+                setVal('glockm-pen-2', 0);
+                setVal('glockm-pen-3', 0);
+                setVal('glockm-pen-miss', 0);
+                setVal('glockm-pen-proc', 0);
             }
 
             updateAllStageTotals();

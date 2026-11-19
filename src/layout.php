@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 function render_header(string $title, string $activeNav, array $user, Auth $auth): void
 {
+    if (!headers_sent()) {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    }
     $csrf = e($auth->csrfToken());
     $displayName = e($user['display_name']);
     $roleLabel = ($user['role'] ?? 'member') === 'admin' ? 'Admin' : 'Shooter';

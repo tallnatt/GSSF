@@ -79,6 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $users = $storage->getUsers(false);
+$myPasskeys = $storage->getPasskeysForUser((int)$user['id']);
+$passkeyCountsByUser = $storage->getPasskeyCountsByUser();
 $allResults = $storage->getResults();
 $countsByUser = [];
 foreach ($allResults as $r) {
@@ -120,6 +122,7 @@ render_header('Family Shooters', 'users', $user, $auth);
                     <th>Role</th>
                     <th>Default Division</th>
                     <th class="num">Matches</th>
+                    <th class="num">Passkeys</th>
                     <th>Status</th>
                     <th class="actions-col">Actions</th>
                 </tr>
@@ -129,6 +132,7 @@ render_header('Family Shooters', 'users', $user, $auth);
                     <?php
                     $uid = (int)$u['id'];
                     $canEditRow = $isAdmin || $uid === (int)$user['id'];
+                    $pkCount = $passkeyCountsByUser[$uid] ?? 0;
                     $safeUserJson = [
                         'id' => $uid,
                         'username' => $u['username'],
@@ -150,6 +154,7 @@ render_header('Family Shooters', 'users', $user, $auth);
                         <td><span class="tag <?= ($u['role'] ?? 'member') === 'admin' ? 'tag-accent' : '' ?>"><?= e(ucfirst($u['role'] ?? 'member')) ?></span></td>
                         <td><?= e($u['default_division'] ?? 'Amateur Civilian') ?></td>
                         <td class="num mono"><?= $countsByUser[$uid] ?? 0 ?></td>
+                        <td class="num mono"><?= $pkCount ?></td>
                         <td>
                             <?php if (!empty($u['active'])): ?>
                                 <span class="status-pill status-active">Active</span>

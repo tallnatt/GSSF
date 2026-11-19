@@ -1019,8 +1019,11 @@ body {
     }
 
     .stage-grid,
+    .stage-strings-3,
     .stage-strings-4,
-    .stage-strings-5 {
+    .stage-strings-5,
+    .stage-penalties-5,
+    .stage-penalties-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
