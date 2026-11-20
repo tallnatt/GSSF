@@ -46,7 +46,7 @@ function render_header(string $title, string $activeNav, array $user, Auth $auth
             <a href="index.php" id="nav-overview" class="nav-link <?= $activeNav === 'overview' ? 'is-active' : '' ?>">Overview</a>
             <a href="matches.php" id="nav-matches" class="nav-link <?= $activeNav === 'matches' ? 'is-active' : '' ?>">Matches</a>
             <a href="results.php" id="nav-results" class="nav-link <?= $activeNav === 'results' ? 'is-active' : '' ?>">Match Times</a>
-            <a href="compare.php" id="nav-compare" class="nav-link <?= $activeNav === 'compare' ? 'is-active' : '' ?>">Progress Graphs</a>
+            <a href="compare.php" id="nav-compare" class="nav-link <?= $activeNav === 'compare' ? 'is-active' : '' ?>">Progress</a>
             <a href="users.php" id="nav-users" class="nav-link <?= $activeNav === 'users' ? 'is-active' : '' ?>">Family Shooters</a>
         </nav>
 

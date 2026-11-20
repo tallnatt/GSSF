@@ -7,11 +7,11 @@ $user = $auth->requireLogin();
 $users = $storage->getUsers(true);
 $divisions = gssf_divisions();
 
-render_header('Progress Graphs', 'compare', $user, $auth);
+render_header('Progress', 'compare', $user, $auth);
 ?>
 <section class="page-head">
     <div>
-        <h1>Progress Graphs</h1>
+        <h1>Progress</h1>
         <p class="page-subtitle">Compare family match times over time and break down stage performance. Lower times indicate faster runs.</p>
     </div>
     <div class="page-actions">
@@ -94,8 +94,8 @@ render_header('Progress Graphs', 'compare', $user, $auth);
                 <tr>
                     <th>Shooter</th>
                     <th class="num">Matches</th>
-                    <th class="num">First Time</th>
-                    <th class="num">Latest Time</th>
+                    <th class="num">First Match Avg</th>
+                    <th class="num">Latest Match Avg</th>
                     <th class="num">Personal Best</th>
                     <th class="num">Average</th>
                     <th class="num">Change (First &rarr; Latest)</th>
