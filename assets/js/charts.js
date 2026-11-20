@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderLineChart(results, metric);
             renderBarChart(results, aggMode);
-            renderSummaryTable(results, metric, data.match_counts || {});
+            renderSummaryTable(results, metric);
         } catch (err) {
             lineContainer.innerHTML = '<div class="chart-empty">Unable to load chart data.</div>';
             barContainer.innerHTML = '<div class="chart-empty">Unable to load chart data.</div>';
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         barContainer.innerHTML = svg + legend;
     }
 
-    function renderSummaryTable(results, metric, matchCounts = {}) {
+    function renderSummaryTable(results, metric) {
         if (!results.length) {
             summaryBody.innerHTML = '<tr><td colspan="7" class="empty-cell">No match results found.</td></tr>';
             return;
@@ -333,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 (vals) => vals.reduce((a, b) => a + b, 0) / vals.length
             );
 
-            const matchCount = matchCounts[s.id] !== undefined ? Number(matchCounts[s.id]) : matchAvgs.length;
             const first = matchAvgs[0];
             const latest = matchAvgs[matchAvgs.length - 1];
             const best = Math.min(...matchAvgs);
@@ -351,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <strong>${escapeHtml(s.name)}</strong>
                         </span>
                     </td>
-                    <td class="num mono">${matchCount}</td>
+                    <td class="num mono">${matchAvgs.length}</td>
                     <td class="num mono">${first.toFixed(2)}s</td>
                     <td class="num mono">${latest.toFixed(2)}s</td>
                     <td class="num mono strong-time">${best.toFixed(2)}s</td>
